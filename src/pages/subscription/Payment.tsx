@@ -17,8 +17,12 @@ const SubscriptionPayment = () => {
 
     useEffect(() => {
         setTitle('Subscription Payment');
-        refreshData();
     }, [setTitle]);
+
+    // Fetch data on mount every time to ensure freshness
+    useEffect(() => {
+        refreshData();
+    }, []);
 
     const refreshData = async () => {
         if (isLoading) return;
@@ -103,13 +107,13 @@ const SubscriptionPayment = () => {
         setEndDate('');
         setPaymentMethod('Credit Card');
         setUpdatedPrice('');
-        
+
         // Auto-fill Transaction ID
         const txIds = subscriptions
             .map(s => s.transactionId)
             .filter(tid => tid && tid.startsWith('TID-'))
             .map(tid => parseInt(tid?.split('-')[1] || '0', 10));
-        
+
         const nextId = txIds.length > 0 ? Math.max(...txIds) + 1 : 1;
         setTransactionId(`TID-${String(nextId).padStart(3, '0')}`);
 
@@ -227,7 +231,7 @@ const SubscriptionPayment = () => {
                     if (updatedPrice) {
                         cellUpdates.push({ column: 6, value: updatedPrice });
                     }
-                    
+
                     console.log("Updating Subscription sheet Columns 19, 21, 22, 23...");
                     await updateGoogleSheetCellsBySn('Subscription', selectedSub.sn, cellUpdates);
                 } catch (updateErr) {

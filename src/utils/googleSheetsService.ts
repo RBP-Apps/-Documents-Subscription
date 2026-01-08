@@ -199,39 +199,51 @@ export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> 
       );
     }
 
-    // If header found, data starts after it. If not, fallback to slice(1) (standard) or slice(6) (if we blindly trust previous structure)
-    // Using headerIndex is safest.
-    // If header is at index 5 (Row 6), data starts at index 6. body should have rows starting at index 6.
     const startObjIndex = headerIndex !== -1 ? headerIndex + 1 : 1;
     const body = rows.length > startObjIndex ? rows.slice(startObjIndex) : [];
 
     const getDateString = (dateVal: any): string => {
       if (!dateVal) return '';
-      if (typeof dateVal === 'string') return dateVal.trim();
+
+      // Handle Date Object
       if (dateVal instanceof Date) {
-        // Return ISO string or formatted date if needed, but string is safest for now
         return dateVal.toISOString().split('T')[0];
       }
-      return String(dateVal).trim();
+
+      const strVal = String(dateVal).trim();
+
+      // Already ISO? (YYYY-MM-DD)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(strVal)) return strVal;
+
+      // Handle DD/MM/YYYY or DD-MM-YYYY
+      // Regex detects 1-2 digits, separator, 1-2 digits, separator, 4 digits
+      const dmyMatch = strVal.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);
+      if (dmyMatch) {
+        const day = dmyMatch[1].padStart(2, '0');
+        const month = dmyMatch[2].padStart(2, '0');
+        const year = dmyMatch[3];
+        return `${year}-${month}-${day}`;
+      }
+
+      // Handle ISO with Time (YYYY-MM-DDTHH:mm...)
+      if (strVal.includes('T')) {
+        return strVal.split('T')[0];
+      }
+
+      return strVal;
     };
 
     return body
       .map((r: any, index: number) => {
         const fileUrl = (r?.[8] || "").toString().trim();
         const dateStr = getDateString(r?.[0]);
-        const renewalDateStr = getDateString(r?.[7]);
+        const renewalDateStr = getDateString(r?.[7]); // Column H (Index 7)
+        const issueDateStr = getDateString(r?.[12]);  // Column M (Index 12)
         const status = (r?.[9] || "Active").toString().trim();
 
         // Robust rowIndex logic similar to fetchLoansFromGoogleSheets
         const lastVal = r[r.length - 1];
         const serverRowIndex = (typeof lastVal === 'number' && lastVal > 1) ? lastVal : null;
-
-        // Calculate Row Index:
-        // If headerIndex was 5 (Row 6), startObjIndex is 6 (Row 7).
-        // item at index 0 is from rows[6] -> Row 7.
-        // Formula: serverRowIndex OR (headerIndex found + 1 (making it 1-based Row 6) + 1 (next row) + index)
-        // If headerIndex is -1 (defaults to slice 1, assuming Row 1 header), then -1 + 1 + 1 + 0 = 1... incorrect.
-        // If header not found (using default slice 1): index + 2.
 
         const fallbackBase = headerIndex !== -1 ? (headerIndex + 2) : 2;
         const rowIndex = serverRowIndex || (index + fallbackBase);
@@ -252,7 +264,7 @@ export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> 
           rowIndex: rowIndex,
           planned1: (r?.[10] || "").toString().trim(), // Column K is index 10
           actual1: (r?.[11] || "").toString().trim(), // Column L is index 11
-          issueDate: (r?.[12] || "").toString().trim(), // Column M is index 12
+          issueDate: issueDateStr,                    // Column M is index 12
           concernPersonName: (r?.[13] || "").toString().trim(), // Column N is index 13
           concernPersonMobile: (r?.[14] || "").toString().trim(), // Column O is index 14
           concernPersonDepartment: (r?.[15] || "").toString().trim(), // Column P is index 15

@@ -32,9 +32,7 @@ const AllSubscriptions = () => {
 
   useEffect(() => {
     setTitle('All Subscriptions');
-    if (subscriptions.length === 0) {
-      fetchSubscriptionsFromGoogleSheets();
-    }
+    fetchSubscriptionsFromGoogleSheets();
   }, [setTitle]);
 
   const handleRefresh = () => {

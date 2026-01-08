@@ -151,7 +151,7 @@ const EditDocument: React.FC<EditDocumentProps> = ({ isOpen, onClose, documentId
                 try {
                     // Extract base64 content
                     const base64Content = formData.fileContent.split(',')[1] || formData.fileContent;
-                    
+
                     // Guess mime type from header if present
                     let mimeType = 'application/octet-stream';
                     const matches = formData.fileContent.match(/^data:([a-zA-Z0-9]+\/[a-zA-Z0-9-.+]+);base64,/);
@@ -182,38 +182,65 @@ const EditDocument: React.FC<EditDocumentProps> = ({ isOpen, onClose, documentId
                     toast.error("Failed to upload new file, continuing with update...");
                 }
             } else if (formData.fileContent && (formData.fileContent.includes("drive.google.com") || formData.fileContent.includes("docs.google.com"))) {
-                 // Existing Google Drive URL - keep it
-                 fileUrl = formData.fileContent;
+                // Existing Google Drive URL - keep it
+                fileUrl = formData.fileContent;
             } else if (formData.fileContent && formData.fileContent.startsWith("http")) {
-                 // Other HTTP link - keep it
-                 fileUrl = formData.fileContent;
+                // Other HTTP link - keep it
+                fileUrl = formData.fileContent;
             }
 
             // Prepare row data matching the SHEET columns:
             // Preservation Logic: Use existing date/timestamp if available.
             // Strict cleanup: If it contains 'T' and 'Z' (ISO), convert it back to YYYY-MM-DD HH:mm:ss
             // If it's already clean, keep it.
-            let timestampToUse = new Date().toLocaleString(); 
-            
+            let timestampToUse = new Date().toLocaleString();
+
             if (formData.date && typeof formData.date === 'string') {
-                 if (formData.date.includes('T') || formData.date.includes('Z')) {
-                      // It's ISO, clean it
-                      const d = new Date(formData.date);
-                      if (!isNaN(d.getTime())) {
+                if (formData.date.includes('T') || formData.date.includes('Z')) {
+                    // It's ISO, clean it
+                    const d = new Date(formData.date);
+                    if (!isNaN(d.getTime())) {
                         timestampToUse = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}`;
-                      }
-                 } else {
-                     // Assume it's already clean or valid enough
-                     timestampToUse = formData.date;
-                 }
+                    }
+                } else {
+                    // Assume it's already clean or valid enough
+                    timestampToUse = formData.date;
+                }
             } else {
-                 // Fallback if empty
-                 const now = new Date();
-                 timestampToUse = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+                // Fallback if empty
+                const now = new Date();
+                timestampToUse = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
             }
-            
+
             // Note: Google Sheets sometimes auto-detects date. Putting a ' before it forces string but might break other things.
             // Ideally, sending strict "YYYY-MM-DD HH:mm:ss" without T/Z is treated as string or custom date by Sheets.
+
+            // Format Dates for Submission
+            const now = new Date();
+
+            // Format Renewal Date: YYYY-MM-DD HH:mm:ss (For Google Sheets Formulas)
+            let formattedRenewalDate = "";
+            if (formData.renewalDate) {
+                // Check if it matches YYYY-MM-DD
+                if (formData.renewalDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    const hours = String(now.getHours()).padStart(2, '0');
+                    const minutes = String(now.getMinutes()).padStart(2, '0');
+                    formattedRenewalDate = `${formData.renewalDate} ${hours}:${minutes}`;
+                } else {
+                    // Try to parse if it's already in another format or just pass through if not simple date
+                    formattedRenewalDate = formData.renewalDate;
+                }
+            }
+
+            // Format Issue Date: YYYY-MM-DD (ISO 8601 to avoid DD/MM vs MM/DD confusion)
+            let formattedIssueDate = "";
+            if (formData.issueDate) {
+                if (formData.issueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+                    formattedIssueDate = formData.issueDate; // Keep YYYY-MM-DD
+                } else {
+                    formattedIssueDate = formData.issueDate;
+                }
+            }
 
             const sheetRow = [
                 timestampToUse,                               // 0: Timestamp (Preserves existing)
@@ -223,8 +250,15 @@ const EditDocument: React.FC<EditDocumentProps> = ({ isOpen, onClose, documentId
                 formData.category,                            // 4: Category
                 formData.companyName,                         // 5: Name
                 formData.needsRenewal ? "Yes" : "No",         // 6: Renewal
-                formData.renewalDate ? new Date(formData.renewalDate).toLocaleDateString("en-GB") : "", // 7: Renewal Date
-                fileUrl                                       // 8: Image URL
+                formattedRenewalDate,                         // 7: Renewal Date (DD/MM/YYYY HH:MM)
+                fileUrl,                                      // 8: Image URL
+                null,                                         // 9: Status (Null to avoid blocking array formulas)
+                null,                                         // 10: Planned1
+                null,                                         // 11: Actual1
+                formattedIssueDate,                           // 12: Issue Date (DD/MM/YYYY)
+                formData.concernPersonName || "",             // 13: Concern Name (Col N)
+                formData.concernPersonMobile || "",           // 14: Concern Mobile (Col O)
+                formData.concernPersonDepartment || ""        // 15: Concern Dept (Col P)
             ];
 
             // Submit Update with rowIndex if available
@@ -365,6 +399,53 @@ const EditDocument: React.FC<EditDocumentProps> = ({ isOpen, onClose, documentId
                                             <span className="text-xs font-medium truncate max-w-[180px]">{fileName || "Change File"}</span>
                                         </label>
                                     </div>
+                                </div>
+
+                                {/* 7. Issue Date */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Issue Date</label>
+                                    <input
+                                        type="date"
+                                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none font-medium bg-gray-50/50 focus:bg-white transition-colors"
+                                        value={formData.issueDate || ''}
+                                        onChange={e => handleChange('issueDate', e.target.value)}
+                                    />
+                                </div>
+
+                                {/* 8. Concern Person Name */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Concern Person Name</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none font-medium bg-gray-50/50 focus:bg-white transition-colors"
+                                        value={formData.concernPersonName || ''}
+                                        onChange={e => handleChange('concernPersonName', e.target.value)}
+                                        placeholder="Name"
+                                    />
+                                </div>
+
+                                {/* 9. Concern Person Mobile */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Concern Person Mobile</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none font-medium bg-gray-50/50 focus:bg-white transition-colors"
+                                        value={formData.concernPersonMobile || ''}
+                                        onChange={e => handleChange('concernPersonMobile', e.target.value)}
+                                        placeholder="Mobile"
+                                    />
+                                </div>
+
+                                {/* 10. Concern Person Department */}
+                                <div>
+                                    <label className="block text-xs font-semibold text-gray-600 mb-1">Concern Person Dept</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-2 text-xs border border-gray-200 rounded-lg focus:ring-1 focus:ring-indigo-500 outline-none font-medium bg-gray-50/50 focus:bg-white transition-colors"
+                                        value={formData.concernPersonDepartment || ''}
+                                        onChange={e => handleChange('concernPersonDepartment', e.target.value)}
+                                        placeholder="Department"
+                                    />
                                 </div>
 
                             </div>

@@ -284,6 +284,20 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
         const now = new Date();
         const formattedTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
 
+        // Format Renewal Date: YYYY-MM-DD HH:mm (For Google Sheets Formulas)
+        let formattedRenewalDate = "";
+        if (entry.renewalDate) {
+          const hours = String(now.getHours()).padStart(2, '0');
+          const minutes = String(now.getMinutes()).padStart(2, '0');
+          formattedRenewalDate = `${entry.renewalDate} ${hours}:${minutes}`;
+        }
+
+        // Format Issue Date: YYYY-MM-DD (ISO 8601 to avoid DD/MM vs MM/DD confusion)
+        let formattedIssueDate = "";
+        if (entry.issueDate) {
+          formattedIssueDate = entry.issueDate; // Already YYYY-MM-DD from input type="date"
+        }
+
         const sheetData = {
           Timestamp: formattedTimestamp,
           "Serial No": randomSN,
@@ -292,11 +306,9 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           Category: entry.category,
           Name: entry.companyName,
           "Need Renewal": entry.needsRenewal ? "Yes" : "No",
-          "Renewal Date": entry.renewalDate
-            ? entry.renewalDate // Send YYYY-MM-DD directly to avoid locale confusion
-            : "",
+          "Renewal Date": formattedRenewalDate,
           Image: fileUrl || "",
-          issueDate: entry.issueDate || "", // Col M
+          issueDate: formattedIssueDate, // Col M
           concernPersonName: entry.concernPersonName || "", // Col N
           concernPersonMobile: entry.concernPersonMobile || "", // Col O
           concernPersonDepartment: entry.concernPersonDepartment || "", // Col P
@@ -320,9 +332,9 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
             sheetData["Need Renewal"],
             sheetData["Renewal Date"],
             sheetData.Image,
-            "Active", // J
-            "",       // K
-            "",       // L
+            null,       // J: Null to clear and avoid blocking array formulas
+            null,       // K
+            null,       // L
             sheetData.issueDate,            // M
             sheetData.concernPersonName,    // N
             sheetData.concernPersonMobile,  // O
