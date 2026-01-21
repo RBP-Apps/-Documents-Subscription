@@ -39,13 +39,13 @@ const AddSubscription: React.FC<AddSubscriptionProps> = ({ isOpen, onClose, onSu
 
   const fetchNextAvailableSN = async () => {
     try {
-      const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
+      const VITE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbylxNsPrLuKAn-kbaL-XFL66wDfGR9y5tEQvcs2w1Z0zhxPTBbYu_LPnBSb8L24Lw9b/exec";
       
-      if (!GOOGLE_SCRIPT_URL) {
+      if (!VITE_GOOGLE_SCRIPT_URL) {
         throw new Error("Google Script URL is not defined");
       }
 
-      const url = new URL(GOOGLE_SCRIPT_URL);
+      const url = new URL(VITE_GOOGLE_SCRIPT_URL);
       url.searchParams.set("sheet", "Subscription");
       url.searchParams.set("_t", new Date().getTime().toString());
 

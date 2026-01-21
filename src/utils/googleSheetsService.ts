@@ -1,6 +1,6 @@
 import { DocumentItem, LoanItem, RenewalItem } from '../store/dataStore';
 import { User } from '../store/authStore';
-const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
+const VITE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbylxNsPrLuKAn-kbaL-XFL66wDfGR9y5tEQvcs2w1Z0zhxPTBbYu_LPnBSb8L24Lw9b/exec";
 
 interface SheetPayload {
   action: string;
@@ -34,7 +34,7 @@ export interface MasterSheetRow {
 }
 
 export const submitToGoogleSheets = async (payload: SheetPayload) => {
-  if (!GOOGLE_SCRIPT_URL) {
+  if (!VITE_GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
     );
@@ -87,7 +87,7 @@ export const submitToGoogleSheets = async (payload: SheetPayload) => {
       params.append("data", JSON.stringify(payload.data));
     }
 
-    const res = await fetch(GOOGLE_SCRIPT_URL, {
+    const res = await fetch(VITE_GOOGLE_SCRIPT_URL, {
       method: "POST",
       mode: "cors",
       headers: {
@@ -125,13 +125,13 @@ export const submitToGoogleSheets = async (payload: SheetPayload) => {
 };
 
 export const fetchMasterFromGoogleSheets = async () => {
-  if (!GOOGLE_SCRIPT_URL) {
+  if (!VITE_GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
     );
   }
 
-  const url = new URL(GOOGLE_SCRIPT_URL);
+  const url = new URL(VITE_GOOGLE_SCRIPT_URL);
   url.searchParams.set("sheet", "Master");
   url.searchParams.set("_t", new Date().getTime().toString());
 
@@ -164,13 +164,13 @@ export const fetchMasterFromGoogleSheets = async () => {
 };
 
 export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> => {
-  if (!GOOGLE_SCRIPT_URL) {
+  if (!VITE_GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
     );
   }
 
-  const url = new URL(GOOGLE_SCRIPT_URL);
+  const url = new URL(VITE_GOOGLE_SCRIPT_URL);
   url.searchParams.set("sheet", "Documents");
   url.searchParams.set("_t", new Date().getTime().toString());
 
@@ -280,13 +280,13 @@ export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> 
 };
 
 export const fetchRenewalHistoryFromGoogleSheets = async (): Promise<RenewalItem[]> => {
-  if (!GOOGLE_SCRIPT_URL) {
+  if (!VITE_GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
     );
   }
 
-  const url = new URL(GOOGLE_SCRIPT_URL);
+  const url = new URL(VITE_GOOGLE_SCRIPT_URL);
   url.searchParams.set("sheet", "Document Renewal");
   url.searchParams.set("_t", new Date().getTime().toString());
 
@@ -349,11 +349,11 @@ export const fetchRenewalHistoryFromGoogleSheets = async (): Promise<RenewalItem
 };
 
 export const fetchUsersFromGoogleSheets = async (): Promise<User[]> => {
-  if (!GOOGLE_SCRIPT_URL) {
+  if (!VITE_GOOGLE_SCRIPT_URL) {
     throw new Error("Google Script URL is not defined");
   }
 
-  const url = new URL(GOOGLE_SCRIPT_URL);
+  const url = new URL(VITE_GOOGLE_SCRIPT_URL);
   url.searchParams.set("sheet", "Pass");
   url.searchParams.set("_t", new Date().getTime().toString());
 
@@ -383,13 +383,13 @@ export const fetchUsersFromGoogleSheets = async (): Promise<User[]> => {
 };
 
 export const fetchLoansFromGoogleSheets = async (): Promise<LoanItem[]> => {
-  if (!GOOGLE_SCRIPT_URL) {
+  if (!VITE_GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
     );
   }
 
-  const url = new URL(GOOGLE_SCRIPT_URL);
+  const url = new URL(VITE_GOOGLE_SCRIPT_URL);
   url.searchParams.set("sheet", "Loan");
   url.searchParams.set("_t", new Date().getTime().toString());
 
@@ -494,7 +494,7 @@ export const sendEmailViaGoogleSheets = async (emailData: EmailData) => {
     if (emailData.category) params.append('category', emailData.category);
     if (emailData.serialNo) params.append('serialNo', emailData.serialNo);
 
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
+    const response = await fetch(VITE_GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -512,7 +512,7 @@ export const getFileInfoFromGoogleDrive = async (fileId: string) => {
     const params = new URLSearchParams();
     params.append('action', 'getFileInfo');
     params.append('fileId', fileId);
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
+    const response = await fetch(VITE_GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -539,7 +539,7 @@ export const logSharingActivity = async (logData: SharingLogData) => {
     if (logData.email) params.append('email', logData.email);
     if (logData.number) params.append('number', logData.number);
 
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
+    const response = await fetch(VITE_GOOGLE_SCRIPT_URL, {
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -600,7 +600,7 @@ export const updateGoogleSheetCells = async (
       params.append("cellUpdates", payload.cellUpdates);
     }
 
-    const res = await fetch(GOOGLE_SCRIPT_URL, {
+    const res = await fetch(VITE_GOOGLE_SCRIPT_URL, {
       method: "POST",
       mode: "cors",
       headers: {
@@ -645,7 +645,7 @@ export const updateGoogleSheetCellsBySn = async (
     params.append("sn", payload.sn);
     params.append("cellUpdates", payload.cellUpdates);
 
-    const res = await fetch(GOOGLE_SCRIPT_URL, {
+    const res = await fetch(VITE_GOOGLE_SCRIPT_URL, {
       method: "POST",
       mode: "cors",
       headers: {
@@ -680,11 +680,11 @@ export interface RawSubscriptionRenewal {
 }
 
 export const fetchSubscriptionRenewalHistoryFromGoogleSheets = async (): Promise<RawSubscriptionRenewal[]> => {
-  if (!GOOGLE_SCRIPT_URL) {
+  if (!VITE_GOOGLE_SCRIPT_URL) {
     throw new Error("Google Script URL is not defined");
   }
 
-  const url = new URL(GOOGLE_SCRIPT_URL);
+  const url = new URL(VITE_GOOGLE_SCRIPT_URL);
   url.searchParams.set("sheet", "RENEWAL");
   url.searchParams.set("_t", new Date().getTime().toString());
 
