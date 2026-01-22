@@ -1,6 +1,7 @@
 import { SubscriptionItem } from "../store/dataStore";
 
 export const syncSubscriptions = async (): Promise<SubscriptionItem[]> => {
+<<<<<<< HEAD
     const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
     if (!GOOGLE_SCRIPT_URL) throw new Error("Google Script URL is not defined");
 
@@ -9,6 +10,16 @@ export const syncSubscriptions = async (): Promise<SubscriptionItem[]> => {
         fetch(`${GOOGLE_SCRIPT_URL}?sheet=Subscription&_t=${Date.now()}`),
         fetch(`${GOOGLE_SCRIPT_URL}?sheet=Subscription%20Approval&_t=${Date.now()}`),
         fetch(`${GOOGLE_SCRIPT_URL}?sheet=PAYMENT&_t=${Date.now()}`)
+=======
+    const VITE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbylxNsPrLuKAn-kbaL-XFL66wDfGR9y5tEQvcs2w1Z0zhxPTBbYu_LPnBSb8L24Lw9b/exec";
+    if (!VITE_GOOGLE_SCRIPT_URL) throw new Error("Google Script URL is not defined");
+
+    // Parallel Fetch all necessary sheets
+    const [subRes, appRes, payRes] = await Promise.all([
+        fetch(`${VITE_GOOGLE_SCRIPT_URL}?sheet=Subscription&_t=${Date.now()}`),
+        fetch(`${VITE_GOOGLE_SCRIPT_URL}?sheet=Subscription%20Approval&_t=${Date.now()}`),
+        fetch(`${VITE_GOOGLE_SCRIPT_URL}?sheet=PAYMENT&_t=${Date.now()}`)
+>>>>>>> 1eb13e97bf85998eb54b2b332d67bbda763957b7
     ]);
 
     const [subJson, appJson, payJson] = await Promise.all([

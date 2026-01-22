@@ -29,11 +29,19 @@ const SubscriptionApproval = () => {
     const refreshData = async () => {
         try {
             setIsLoading(true);
+<<<<<<< HEAD
             const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
             if (!GOOGLE_SCRIPT_URL) return;
 
             // 1. Fetch Base Subscriptions
             const subUrl = new URL(GOOGLE_SCRIPT_URL);
+=======
+            const VITE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_VITE_GOOGLE_SCRIPT_URL || "";
+            if (!VITE_GOOGLE_SCRIPT_URL) return;
+
+            // 1. Fetch Base Subscriptions
+            const subUrl = new URL(VITE_GOOGLE_SCRIPT_URL);
+>>>>>>> 1eb13e97bf85998eb54b2b332d67bbda763957b7
             subUrl.searchParams.set("sheet", "Subscription");
             subUrl.searchParams.set("_t", Date.now().toString());
 
@@ -82,7 +90,11 @@ const SubscriptionApproval = () => {
                 });
 
             // 2. Fetch Approval Logs
+<<<<<<< HEAD
             const appUrl = new URL(GOOGLE_SCRIPT_URL);
+=======
+            const appUrl = new URL(VITE_GOOGLE_SCRIPT_URL);
+>>>>>>> 1eb13e97bf85998eb54b2b332d67bbda763957b7
             appUrl.searchParams.set("sheet", "Approval");
             appUrl.searchParams.set("_t", Date.now().toString());
 
@@ -177,10 +189,17 @@ const SubscriptionApproval = () => {
 
     const fetchNextApprovalSN = async () => {
         try {
+<<<<<<< HEAD
             const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
             if (!GOOGLE_SCRIPT_URL) return `AN-${Date.now().toString().slice(-6)}`;
 
             const url = new URL(GOOGLE_SCRIPT_URL);
+=======
+            const VITE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_VITE_GOOGLE_SCRIPT_URL || "";
+            if (!VITE_GOOGLE_SCRIPT_URL) return `AN-${Date.now().toString().slice(-6)}`;
+
+            const url = new URL(VITE_GOOGLE_SCRIPT_URL);
+>>>>>>> 1eb13e97bf85998eb54b2b332d67bbda763957b7
             url.searchParams.set("sheet", "Approval");
             url.searchParams.set("_t", new Date().getTime().toString());
 
