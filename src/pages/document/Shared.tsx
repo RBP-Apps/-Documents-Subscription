@@ -30,11 +30,7 @@ const SharedDocuments = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [error, setError] = useState<string | null>(null);
 
-<<<<<<< HEAD
     const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-=======
-    const VITE_GOOGLE_SCRIPT_URL = import.meta.env.VITE_VITE_GOOGLE_SCRIPT_URL || "https://script.google.com/macros/s/AKfycbylxNsPrLuKAn-kbaL-XFL66wDfGR9y5tEQvcs2w1Z0zhxPTBbYu_LPnBSb8L24Lw9b/exec";
->>>>>>> 1eb13e97bf85998eb54b2b332d67bbda763957b7
 
     useEffect(() => {
         setTitle('Share History');
@@ -46,19 +42,12 @@ const SharedDocuments = () => {
             setLoading(true);
             setError(null);
 
-<<<<<<< HEAD
             if (!GOOGLE_SCRIPT_URL) {
                 throw new Error("Google Script URL is not defined");
             }
 
             const url = new URL(GOOGLE_SCRIPT_URL);
-=======
-            if (!VITE_GOOGLE_SCRIPT_URL) {
-                throw new Error("Google Script URL is not defined");
-            }
-
-            const url = new URL(VITE_GOOGLE_SCRIPT_URL);
->>>>>>> 1eb13e97bf85998eb54b2b332d67bbda763957b7
+            
             url.searchParams.set("sheet", "Shared Documents");
             url.searchParams.set("_t", new Date().getTime().toString());
 
