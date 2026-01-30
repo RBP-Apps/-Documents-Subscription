@@ -18,12 +18,19 @@ import EditDocument from "./EditDocument";
 import ShareModal from "./ShareModal";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { formatDate } from "../../utils/dateFormatter";
-import { fetchDocumentsFromGoogleSheets, submitToGoogleSheets } from "../../utils/googleSheetsService";
+import {
+  fetchDocumentsFromGoogleSheets,
+  submitToGoogleSheets,
+} from "../../utils/googleSheetsService";
 import { toast } from "react-hot-toast";
 import type { DocumentItem } from "../../store/dataStore";
 
 const AllDocuments = () => {
-  const { deleteDocument, setDocuments: setStoreDocuments, documents: storeDocuments } = useDataStore();
+  const {
+    deleteDocument,
+    setDocuments: setStoreDocuments,
+    documents: storeDocuments,
+  } = useDataStore();
   const { setTitle } = useHeaderStore();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterCategory, setFilterCategory] = useState("");
@@ -41,17 +48,20 @@ const AllDocuments = () => {
   const deduplicateDocuments = (docs: DocumentItem[]): DocumentItem[] => {
     const uniqueMap = new Map<string, DocumentItem>();
 
-    docs.forEach(doc => {
-      const uniqueKey = `${doc.sn}_${doc.documentName}_${doc.companyName}_${doc.category}`.toLowerCase().trim();
+    docs.forEach((doc) => {
+      const uniqueKey =
+        `${doc.sn}_${doc.documentName}_${doc.companyName}_${doc.category}`
+          .toLowerCase()
+          .trim();
 
       if (!uniqueMap.has(uniqueKey)) {
         uniqueMap.set(uniqueKey, doc);
       } else {
-        console.warn('Duplicate document found:', {
+        console.warn("Duplicate document found:", {
           serialNo: doc.sn,
           name: doc.documentName,
           company: doc.companyName,
-          category: doc.category
+          category: doc.category,
         });
       }
     });
@@ -73,7 +83,8 @@ const AllDocuments = () => {
       setStoreDocuments(uniqueDocs);
     } catch (err: unknown) {
       console.error("Error loading documents from Google Sheets:", err);
-      const errorMessage = err instanceof Error ? err.message : "Failed to load documents";
+      const errorMessage =
+        err instanceof Error ? err.message : "Failed to load documents";
 
       // Fall back to local store data
       if (storeDocuments && storeDocuments.length > 0) {
@@ -93,7 +104,9 @@ const AllDocuments = () => {
     .filter((item) => {
       const matchesSearch =
         item.documentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.companyName?.toLowerCase().includes(searchTerm.toLowerCase()) || // Search in companyName (name field)
+        (item.pName?.toLowerCase().includes(searchTerm.toLowerCase()) || false) || // Search in name field if exists
+        (item.companyBranch?.toLowerCase().includes(searchTerm.toLowerCase()) || false) || // Search in companyBranch
         item.sn.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesCategory = filterCategory
@@ -111,6 +124,8 @@ const AllDocuments = () => {
       return getSnNumber(a.sn) - getSnNumber(b.sn);
     });
 
+
+  console.log("FILTERED DATA:", filteredData);  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const toggleSelection = (id: string) => {
@@ -185,23 +200,34 @@ const AllDocuments = () => {
           doc.documentName,
           doc.documentType,
           doc.category,
-          doc.companyName,
+          doc.pName || "", // Column F: Name (user entered name)
           doc.needsRenewal ? "Yes" : "No",
-          doc.renewalDate ? new Date(doc.renewalDate).toLocaleDateString("en-GB") : "",
+          doc.renewalDate
+            ? new Date(doc.renewalDate).toLocaleDateString("en-GB")
+            : "",
           doc.fileContent || "",
-          "Deleted"
+          "Deleted",
+          null, // Column K: Planned1
+          null, // Column L: Actual1
+          doc.issueDate || "", // Column M
+          doc.concernPersonName || "", // Column N
+          doc.concernPersonMobile || "", // Column O
+          doc.concernPersonDepartment || "", // Column P
+          doc.companyName || "", // Column Q: Company Name
         ];
 
         await submitToGoogleSheets({
           action: "update",
           sheetName: "Documents",
           data: sheetRow,
-          rowIndex: doc.rowIndex
+          rowIndex: doc.rowIndex,
         });
         toast.success("Document deleted from cloud", { id: "delete-toast" });
       } catch (error) {
         console.error("Failed to delete from cloud", error);
-        toast.error("Deleted locally, but cloud update failed.", { id: "delete-toast" });
+        toast.error("Deleted locally, but cloud update failed.", {
+          id: "delete-toast",
+        });
       }
     } else {
       toast.success("Document deleted locally");
@@ -218,7 +244,7 @@ const AllDocuments = () => {
       document?: DocumentItem;
       isBatch?: boolean;
       batchDocuments?: DocumentItem[];
-    }
+    },
   ) => {
     setShareType(type);
     setShareDoc(doc);
@@ -227,7 +253,7 @@ const AllDocuments = () => {
 
   // Function to handle batch sharing
   const handleBatchShare = (type: "email" | "whatsapp") => {
-    const selectedDocuments = filteredData.filter(d => selectedIds.has(d.id));
+    const selectedDocuments = filteredData.filter((d) => selectedIds.has(d.id));
 
     if (selectedDocuments.length === 0) {
       toast.error("No documents selected");
@@ -242,7 +268,7 @@ const AllDocuments = () => {
         name: doc.documentName,
         fileContent: doc.fileContent,
         document: doc,
-        isBatch: false
+        isBatch: false,
       });
     } else {
       // Multiple documents selected - batch mode
@@ -253,7 +279,7 @@ const AllDocuments = () => {
         batchDocuments: selectedDocuments,
         // Include first document for reference
         document: selectedDocuments[0],
-        fileContent: selectedDocuments[0]?.fileContent
+        fileContent: selectedDocuments[0]?.fileContent,
       });
     }
   };
@@ -267,7 +293,7 @@ const AllDocuments = () => {
     let fileUrl = fileContent;
 
     // Convert Google Drive view/edit URLs to direct view URLs
-    if (fileUrl.includes('drive.google.com')) {
+    if (fileUrl.includes("drive.google.com")) {
       let fileId = null;
 
       const viewMatch = fileUrl.match(/\/file\/d\/([^/]+)/);
@@ -295,7 +321,7 @@ const AllDocuments = () => {
       return;
     }
 
-    window.open(fileUrl, '_blank');
+    window.open(fileUrl, "_blank");
   };
 
   const handleAddModalClose = () => {
@@ -500,13 +526,16 @@ const AllDocuments = () => {
                       File
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
-                      Concern Name
+                      Agent Name
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
                       Concern Mobile
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
-                      Concern Dept
+                      Product Of
+                    </th>
+                    <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
+                      Company Name
                     </th>
                   </tr>
                 </thead>
@@ -514,8 +543,9 @@ const AllDocuments = () => {
                   {filteredData.map((item) => (
                     <tr
                       key={item.id}
-                      className={`hover:bg-gray-50/80 transition-colors ${selectedIds.has(item.id) ? "bg-indigo-50/30" : ""
-                        }`}
+                      className={`hover:bg-gray-50/80 transition-colors ${
+                        selectedIds.has(item.id) ? "bg-indigo-50/30" : ""
+                      }`}
                     >
                       <td className="px-3 py-2 text-center">
                         <input
@@ -546,7 +576,7 @@ const AllDocuments = () => {
                                     name: item.documentName,
                                     fileContent: item.fileContent,
                                     document: item,
-                                    isBatch: false
+                                    isBatch: false,
                                   })
                                 }
                               >
@@ -561,7 +591,7 @@ const AllDocuments = () => {
                                     name: item.documentName,
                                     fileContent: item.fileContent,
                                     document: item,
-                                    isBatch: false
+                                    isBatch: false,
                                   })
                                 }
                               >
@@ -580,7 +610,7 @@ const AllDocuments = () => {
                                     name: item.documentName,
                                     fileContent: item.fileContent,
                                     document: item,
-                                    isBatch: false
+                                    isBatch: false,
                                   })
                                 }
                               >
@@ -614,7 +644,6 @@ const AllDocuments = () => {
                       </td>
                       <td className="px-3 py-2 text-gray-900">
                         <div className="flex items-center justify-center gap-2">
-                          {/* <FileText size={16} className="text-gray-400" /> */}
                           {item.documentName}
                         </div>
                       </td>
@@ -627,7 +656,7 @@ const AllDocuments = () => {
                         </span>
                       </td>
                       <td className="px-3 py-2 font-medium text-gray-900 text-center">
-                        {item.companyName}
+                        { item.pName || "-"}
                       </td>
                       <td className="px-3 py-2 text-gray-700 font-mono text-xs text-center">
                         {formatDate(item.issueDate)}
@@ -649,9 +678,7 @@ const AllDocuments = () => {
                       <td className="px-3 py-2">
                         {item.file ? (
                           <div
-                            onClick={() =>
-                              handleDownload(item.fileContent)
-                            }
+                            onClick={() => handleDownload(item.fileContent)}
                             className="flex items-center justify-center gap-2 text-indigo-600 text-xs cursor-pointer hover:underline"
                           >
                             <Download size={14} />
@@ -670,11 +697,17 @@ const AllDocuments = () => {
                       <td className="px-3 py-2 text-gray-700 text-center">
                         {item.concernPersonDepartment || "-"}
                       </td>
+                      <td className="px-3 py-2 text-gray-700 text-center">
+                        {item.companyName || "-"}
+                      </td>
                     </tr>
                   ))}
                   {filteredData.length === 0 && (
                     <tr>
-                      <td colSpan={15} className="p-12 text-center text-gray-500">
+                      <td
+                        colSpan={16}
+                        className="p-12 text-center text-gray-500"
+                      >
                         <div className="flex flex-col items-center gap-2">
                           <FileText size={48} className="text-gray-200" />
                           <p>No documents found</p>
@@ -702,9 +735,12 @@ const AllDocuments = () => {
                       {item.sn}
                     </span>
                     <h3 className="font-semibold text-gray-900 mt-1">
-                      {item.companyName}
+                      {item.companyName || "-"}
                     </h3>
                     <p className="text-xs text-gray-500">{item.documentType}</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      Company: {item.companyBranch || "-"}
+                    </p>
                   </div>
                   <span className="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded text-[10px] font-medium border border-indigo-100">
                     {item.category}
@@ -764,9 +800,7 @@ const AllDocuments = () => {
                   <div className="pt-3 mt-3 border-t border-gray-50 flex justify-between items-center bg-gray-50/50 -mx-4 -mb-4 px-4 py-3">
                     {item.file ? (
                       <button
-                        onClick={() =>
-                          handleDownload(item.fileContent)
-                        }
+                        onClick={() => handleDownload(item.fileContent)}
                         className="flex items-center gap-1.5 text-indigo-600 text-xs font-medium"
                       >
                         <Download size={14} />
@@ -796,7 +830,7 @@ const AllDocuments = () => {
                                   name: item.documentName,
                                   fileContent: item.fileContent,
                                   document: item,
-                                  isBatch: false
+                                  isBatch: false,
                                 })
                               }
                             >
@@ -811,7 +845,7 @@ const AllDocuments = () => {
                                   name: item.documentName,
                                   fileContent: item.fileContent,
                                   document: item,
-                                  isBatch: false
+                                  isBatch: false,
                                 })
                               }
                             >
@@ -830,7 +864,7 @@ const AllDocuments = () => {
                                   name: item.documentName,
                                   fileContent: item.fileContent,
                                   document: item,
-                                  isBatch: false
+                                  isBatch: false,
                                 })
                               }
                             >
@@ -869,10 +903,7 @@ const AllDocuments = () => {
           </div>
         )}
       </div>
-      <AddDocument
-        isOpen={isAddModalOpen}
-        onClose={handleAddModalClose}
-      />
+      <AddDocument isOpen={isAddModalOpen} onClose={handleAddModalClose} />
       <EditDocument
         isOpen={isEditModalOpen}
         onClose={handleEditModalClose}
@@ -898,9 +929,12 @@ const AllDocuments = () => {
               <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trash2 className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Delete Document?</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">
+                Delete Document?
+              </h3>
               <p className="text-gray-500 mb-6">
-                Are you sure you want to delete this document? This action cannot be undone.
+                Are you sure you want to delete this document? This action
+                cannot be undone.
               </p>
               <div className="flex gap-3">
                 <button

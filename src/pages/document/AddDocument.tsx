@@ -14,7 +14,8 @@ interface DocumentEntry {
   documentName: string;
   documentType: string;
   category: string;
-  companyName: string; // The "Name" field
+  name: string; // The "Name" field (user entered name)
+  companyName: string; // Company name from dropdown
   needsRenewal: boolean;
   renewalDate?: string;
   file: File | null;
@@ -46,7 +47,8 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
       documentName: "",
       documentType: "",
       category: "",
-      companyName: "",
+      name: "", // User entered name
+      companyName: "", // Company name from dropdown
       needsRenewal: false,
       renewalDate: "",
       file: null,
@@ -66,10 +68,9 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
   const categoryOptions = useMemo(() => {
     const local = masterData?.map((m) => m.category) || [];
     return Array.from(
-      new Set([...remoteCategories, ...local, ...defaultCategories])
+      new Set([...remoteCategories, ...local, ...defaultCategories]),
     ).filter(Boolean);
   }, [masterData, remoteCategories]);
-  // nameOptions removed as we switched to Input for Name per requirement interpretation
 
   useEffect(() => {
     if (!isOpen) return;
@@ -81,10 +82,22 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
         if (!mounted) return;
 
         const docTypes = rows
-          .map((r: { documentType: string; category: string }) => r.documentType)
+          .map(
+            (r: {
+              documentType: string;
+              category: string;
+              companyName: string;
+            }) => r.documentType,
+          )
           .filter((v: string) => typeof v === "string" && v.trim().length > 0);
         const cats = rows
-          .map((r: { documentType: string; category: string }) => r.category)
+          .map(
+            (r: {
+              documentType: string;
+              category: string;
+              companyName: string;
+            }) => r.category,
+          )
           .filter((v: string) => typeof v === "string" && v.trim().length > 0);
 
         setRemoteDocTypes(Array.from(new Set(docTypes)));
@@ -103,13 +116,13 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
 
   const handleChange = (id: string, field: keyof DocumentEntry, value: any) => {
     setEntries((prev) =>
-      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item))
+      prev.map((item) => (item.id === id ? { ...item, [field]: value } : item)),
     );
   };
 
   const handleFileChange = (
     id: string,
-    e: React.ChangeEvent<HTMLInputElement>
+    e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -119,13 +132,13 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           prev.map((item) =>
             item.id === id
               ? {
-                ...item,
-                file: file,
-                fileName: file.name,
-                fileContent: reader.result as string,
-              }
-              : item
-          )
+                  ...item,
+                  file: file,
+                  fileName: file.name,
+                  fileContent: reader.result as string,
+                }
+              : item,
+          ),
         );
       };
       reader.readAsDataURL(file);
@@ -144,7 +157,8 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
         documentName: "",
         documentType: "",
         category: "",
-        companyName: "",
+        name: "", // User entered name
+        companyName: "", // Company name from dropdown
         needsRenewal: false,
         renewalDate: "",
         file: null,
@@ -181,7 +195,8 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
         !entry.documentName ||
         !entry.documentType ||
         !entry.category ||
-        !entry.companyName
+        !entry.name || // Required: User entered name
+        !entry.companyName // Required: Company name from dropdown
       ) {
         toast.error("Please fill all required fields.");
         return;
@@ -202,7 +217,10 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
         currentDocs = freshDocs;
       }
     } catch (error) {
-      console.warn("Could not fetch latest docs for SN generation, using local cache", error);
+      console.warn(
+        "Could not fetch latest docs for SN generation, using local cache",
+        error,
+      );
     }
 
     const folderId = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
@@ -226,7 +244,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
     // Generate strict sequence based on Max SN
     for (let i = 0; i < entries.length; i++) {
       const nextVal = maxSn + 1 + i;
-      snList.push(`SN-${nextVal.toString().padStart(3, '0')}`);
+      snList.push(`SN-${nextVal.toString().padStart(3, "0")}`);
     }
 
     try {
@@ -236,15 +254,15 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
       for (const [index, entry] of entries.entries()) {
         const exists = masterData?.some(
           (m) =>
-            m.companyName.toLowerCase() === entry.companyName.toLowerCase() &&
+            m.companyName.toLowerCase() === entry.name.toLowerCase() && // Use 'name' for master data
             m.documentType.toLowerCase() === entry.documentType.toLowerCase() &&
-            m.category.toLowerCase() === entry.category.toLowerCase()
+            m.category.toLowerCase() === entry.category.toLowerCase(),
         );
 
         if (!exists) {
           addMasterData({
             id: Math.random().toString(36).substr(2, 9),
-            companyName: entry.companyName,
+            companyName: entry.name, // Store 'name' in master data
             documentType: entry.documentType,
             category: entry.category,
           });
@@ -275,20 +293,20 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           } catch (uploadErr) {
             console.error(`Failed to upload file ${entry.fileName}`, uploadErr);
             toast.error(
-              `Failed to upload ${entry.fileName}, saving without file.`
+              `Failed to upload ${entry.fileName}, saving without file.`,
             );
           }
         }
 
         // 2. Prepare Payload
         const now = new Date();
-        const formattedTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+        const formattedTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
 
         // Format Renewal Date: YYYY-MM-DD HH:mm (For Google Sheets Formulas)
         let formattedRenewalDate = "";
         if (entry.renewalDate) {
-          const hours = String(now.getHours()).padStart(2, '0');
-          const minutes = String(now.getMinutes()).padStart(2, '0');
+          const hours = String(now.getHours()).padStart(2, "0");
+          const minutes = String(now.getMinutes()).padStart(2, "0");
           formattedRenewalDate = `${entry.renewalDate} ${hours}:${minutes}`;
         }
 
@@ -304,7 +322,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           "Document name": entry.documentName,
           "Document Type": entry.documentType,
           Category: entry.category,
-          Name: entry.companyName,
+          Name: entry.name, // Column F: User entered name
           "Need Renewal": entry.needsRenewal ? "Yes" : "No",
           "Renewal Date": formattedRenewalDate,
           Image: fileUrl || "",
@@ -312,42 +330,45 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           concernPersonName: entry.concernPersonName || "", // Col N
           concernPersonMobile: entry.concernPersonMobile || "", // Col O
           concernPersonDepartment: entry.concernPersonDepartment || "", // Col P
+          CompanyName: entry.companyName, // Column Q: Company name from dropdown
         };
 
         // 3. Submit Document
-        // Columns: 
+        // Columns:
         // A: Timestamp, B: SN, C: Doc Name, D: Doc Type, E: Category, F: Name, G: Need Renewal, H: Renewal Date, I: Image
-        // J: Status (Default Active), K: Planned1 (Empty), L: Actual1 (Empty)
-        // M: Issue Date, N: Concern Name, O: Concern Mobile, P: Concern Dept
+        // J: Status, K: Planned1, L: Actual1, M: Issue Date, N: Concern Name, O: Concern Mobile, P: Concern Dept, Q: Company Name
+        
         await submitToGoogleSheets({
           action: "insert",
           sheetName: "Documents",
           data: [
-            sheetData.Timestamp,
-            sheetData["Serial No"],
-            sheetData["Document name"],
-            sheetData["Document Type"],
-            sheetData.Category,
-            sheetData.Name,
-            sheetData["Need Renewal"],
-            sheetData["Renewal Date"],
-            sheetData.Image,
-            null,       // J: Null to clear and avoid blocking array formulas
-            null,       // K
-            null,       // L
-            sheetData.issueDate,            // M
-            sheetData.concernPersonName,    // N
-            sheetData.concernPersonMobile,  // O
-            sheetData.concernPersonDepartment // P
+            sheetData.Timestamp, // A
+            sheetData["Serial No"], // B
+            sheetData["Document name"], // C
+            sheetData["Document Type"], // D
+            sheetData.Category, // E
+            sheetData.Name, // F: Name (user entered)
+            sheetData["Need Renewal"], // G
+            sheetData["Renewal Date"], // H
+            sheetData.Image, // I
+            null, // J: Status
+            null, // K: Planned1
+            null, // L: Actual1
+            sheetData.issueDate, // M
+            sheetData.concernPersonName, // N
+            sheetData.concernPersonMobile, // O
+            sheetData.concernPersonDepartment, // P
+            sheetData.CompanyName, // Q: Company Name (from dropdown)
           ],
         });
-
+        
         // 4. Update Local State
         newDocuments.push({
           id: Math.random().toString(36).substr(2, 9),
           sn: randomSN,
           documentName: entry.documentName,
-          companyName: entry.companyName,
+          companyName: entry.name, // Store 'name' as companyName in local state (for backward compatibility)
+          pName: entry.name, // User entered name
           documentType: entry.documentType,
           category: entry.category,
           needsRenewal: entry.needsRenewal,
@@ -360,8 +381,10 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           concernPersonName: entry.concernPersonName,
           concernPersonMobile: entry.concernPersonMobile,
           concernPersonDepartment: entry.concernPersonDepartment,
+          companyBranch: entry.companyName, // Store company name as companyBranch
         });
       }
+      
       addDocuments(newDocuments);
       toast.success(`${newDocuments.length} Document(s) added successfully`);
       onClose();
@@ -372,7 +395,8 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           documentName: "",
           documentType: "",
           category: "",
-          companyName: "",
+          name: "", // Reset name
+          companyName: "", // Reset company name
           needsRenewal: false,
           renewalDate: "",
           file: null,
@@ -386,7 +410,6 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
     } catch (error) {
       console.error(error);
       toast.error("Failed to save to Google Sheets.");
-      // Do not close so user can retry
     } finally {
       setIsSubmitting(false);
     }
@@ -455,10 +478,6 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
 
                   {/* 2. Document Type (Searchable) */}
                   <div>
-                    {/* Note: SearchableInput styles are internal, but we can wrap it or accept it's slightly larger. 
-                                             For compacting, we might just use it as is but careful with layout. 
-                                             Ideally, SearchableInput should support size prop. 
-                                             For now, we leave it as 'proper' update focused on layout gaps. */}
                     <SearchableInput
                       compact
                       label="Document Type"
@@ -487,7 +506,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* 4. Name (Input - as changed from Searchable per 'Input' requirement) */}
+                  {/* 4. Name (Input - user entered name) */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
                       {getNameLabel(entry.category)}{" "}
@@ -497,15 +516,37 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                       type="text"
                       required
                       className="p-2 w-full text-xs font-medium rounded-lg border-none transition-colors outline-none shadow-input focus:ring-1 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
-                      value={entry.companyName}
+                      value={entry.name}
                       onChange={(e) =>
-                        handleChange(entry.id, "companyName", e.target.value)
+                        handleChange(entry.id, "name", e.target.value)
                       }
                       placeholder={`Enter ${getNameLabel(entry.category)}...`}
                     />
                   </div>
 
-                  {/* 5. Needs Renewal & Date */}
+                  {/* 5. Company Name (Dropdown Field) */}
+                  <div>
+                    <label className="block mb-1 text-xs font-semibold text-gray-600">
+                      Company Name <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      className="p-2 w-full text-xs font-medium rounded-lg border-none transition-colors outline-none shadow-input focus:ring-1 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
+                      value={entry.companyName}
+                      onChange={(e) =>
+                        handleChange(entry.id, "companyName", e.target.value)
+                      }
+                      required
+                    >
+                      <option value="">Select Company</option>
+                      <option value="Botivate">Botivate</option>
+                      <option value="Tata Insurance">Tata Insurance</option>
+                      <option value="Company A">Company A</option>
+                      <option value="Company B">Company B</option>
+                      <option value="Company C">Company C</option>
+                    </select>
+                  </div>
+
+                  {/* 6. Needs Renewal & Date */}
                   <div className="flex gap-3 items-center p-2 rounded-lg border border-gray-100 bg-gray-50/50">
                     <label className="flex gap-2 items-center cursor-pointer select-none">
                       <input
@@ -516,7 +557,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                           handleChange(
                             entry.id,
                             "needsRenewal",
-                            e.target.checked
+                            e.target.checked,
                           )
                         }
                       />
@@ -535,7 +576,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                             handleChange(
                               entry.id,
                               "renewalDate",
-                              e.target.value
+                              e.target.value,
                             )
                           }
                           required
@@ -544,7 +585,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     )}
                   </div>
 
-                  {/* 6. Issue Date */}
+                  {/* 7. Issue Date */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
                       Issue Date
@@ -559,23 +600,27 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* 7. Concern Person Name */}
+                  {/* 8. Concern Person Name */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      Concern Person Name
+                      Agent Name
                     </label>
                     <input
                       type="text"
                       className="p-2 w-full text-xs font-medium rounded-lg border-none transition-colors outline-none shadow-input focus:ring-1 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
-                      value={entry.concernPersonName}
+                      value={entry.concernPersonName || ""}
                       onChange={(e) =>
-                        handleChange(entry.id, "concernPersonName", e.target.value)
+                        handleChange(
+                          entry.id,
+                          "concernPersonName",
+                          e.target.value,
+                        )
                       }
-                      placeholder="Name"
+                      placeholder="Name (Optional)"
                     />
                   </div>
 
-                  {/* 8. Concern Person Mobile */}
+                  {/* 9. Concern Person Mobile */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
                       Concern Person Mobile
@@ -585,29 +630,37 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                       className="p-2 w-full text-xs font-medium rounded-lg border-none transition-colors outline-none shadow-input focus:ring-1 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
                       value={entry.concernPersonMobile}
                       onChange={(e) =>
-                        handleChange(entry.id, "concernPersonMobile", e.target.value)
+                        handleChange(
+                          entry.id,
+                          "concernPersonMobile",
+                          e.target.value,
+                        )
                       }
                       placeholder="Mobile"
                     />
                   </div>
 
-                  {/* 9. Concern Person Department */}
+                  {/* 10. Concern Person Department */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      Concern Person Dept
+                      Product Of
                     </label>
                     <input
                       type="text"
                       className="p-2 w-full text-xs font-medium rounded-lg border-none transition-colors outline-none shadow-input focus:ring-1 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
                       value={entry.concernPersonDepartment}
                       onChange={(e) =>
-                        handleChange(entry.id, "concernPersonDepartment", e.target.value)
+                        handleChange(
+                          entry.id,
+                          "concernPersonDepartment",
+                          e.target.value,
+                        )
                       }
                       placeholder="Department"
                     />
                   </div>
 
-                  {/* 10. File Upload */}
+                  {/* 11. File Upload */}
                   <div>
                     <div className="relative">
                       <label className="block mb-1 text-xs font-semibold text-gray-600">
@@ -660,10 +713,11 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
             type="submit"
             form="add-doc-form"
             disabled={isSubmitting}
-            className={`flex-[2] flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-white text-sm font-bold transition-all shadow-md shadow-indigo-100 ${isSubmitting
-              ? "bg-indigo-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-700"
-              }`}
+            className={`flex-[2] flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-white text-sm font-bold transition-all shadow-md shadow-indigo-100 ${
+              isSubmitting
+                ? "bg-indigo-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700"
+            }`}
           >
             {isSubmitting ? (
               <>

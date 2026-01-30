@@ -35,6 +35,7 @@ export interface SharingLogData {
 export interface MasterSheetRow {
   documentType: string;
   category: string;
+  companyName: string;
 }
 
 export const submitToGoogleSheets = async (payload: SheetPayload) => {
@@ -164,8 +165,9 @@ export const fetchMasterFromGoogleSheets = async () => {
       .map((r: any) => ({
         documentType: (r?.[0] || "").toString().trim(),
         category: (r?.[1] || "").toString().trim(),
+        companyName: (r?.[2] || "").toString().trim(),
       }))
-      .filter((r: any) => r.documentType.length > 0 || r.category.length > 0);
+      .filter((r: any) => r.documentType.length > 0 || r.category.length > 0 || r.companyName.length > 0);
   } catch (error) {
     console.error("Fetch Master Sheet Error:", error);
     throw error;
@@ -260,13 +262,15 @@ export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> 
         const fallbackBase = headerIndex !== -1 ? (headerIndex + 2) : 2;
         const rowIndex = serverRowIndex || (index + fallbackBase);
 
+        console.log(r
+        );
         return {
           id: `doc-${index}-${Date.now()}`,
           sn: (r?.[1] || "").toString().trim(),
           documentName: (r?.[2] || "").toString().trim(),
           documentType: (r?.[3] || "").toString().trim(),
           category: (r?.[4] || "").toString().trim(),
-          companyName: (r?.[5] || "").toString().trim(),
+          companyName: (r?.[16] || "").toString().trim(),
           needsRenewal: (r?.[6] || "").toString().toLowerCase() === "yes",
           renewalDate: renewalDateStr,
           file: fileUrl ? "View Document" : null,
@@ -280,6 +284,7 @@ export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> 
           concernPersonName: (r?.[13] || "").toString().trim(), // Column N is index 13
           concernPersonMobile: (r?.[14] || "").toString().trim(), // Column O is index 14
           concernPersonDepartment: (r?.[15] || "").toString().trim(), // Column P is index 15
+          pName: (r?.[5] || "").toString().trim(), // Column F: Name (user entered name)
         };
       })
       .filter(

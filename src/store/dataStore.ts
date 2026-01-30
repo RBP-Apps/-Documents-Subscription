@@ -4,10 +4,12 @@ import { persist } from "zustand/middleware";
 export interface DocumentItem {
   id: string;
   sn: string; // Serial Number
-  companyName: string;
+  companyName: string; // User entered name (stored in column F)
   documentType: string;
   category: string;
   documentName: string;
+  pName?: string; // New: User entered name (for display)
+  companyBranch?: string; // New: Company name from dropdown (stored in column Q)
   needsRenewal: boolean;
   renewalDate?: string; // Optional renewal date
   file: string | null; // File name
@@ -21,6 +23,7 @@ export interface DocumentItem {
   concernPersonName?: string; // Column N
   concernPersonMobile?: string; // Column O
   concernPersonDepartment?: string; // Column P
+  // Note: companyBranch is stored in column Q
 }
 
 export interface SubscriptionItem {
@@ -111,7 +114,7 @@ export interface LoanItem {
 
 export interface MasterItem {
   id: string;
-  companyName: string;
+  companyName: string; // This is actually the "name" field (user entered)
   documentType: string;
   category: string;
 }
@@ -123,7 +126,9 @@ export interface RenewalItem {
   documentName: string;
   documentType: string;
   category: string;
-  companyName: string; // "Name"
+  companyName: string; // "Name" from column F
+  name?: string; // New: User entered name
+  companyBranch?: string; // New: Company name from column Q
   entryDate: string;
   oldRenewalDate: string; // "Renewal" column in history
   oldFile: string | null; // "Document File" column
