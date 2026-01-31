@@ -726,9 +726,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
               >
                 <Plus size={16} />
                 Add Another Document ({entries.length}/10)
-                <span className="text-xs text-indigo-400 ml-1">
-                  (Auto-fills from above)
-                </span>
+              
               </button>
             </div>
           </form>
