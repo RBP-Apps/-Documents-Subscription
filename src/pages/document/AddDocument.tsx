@@ -34,13 +34,10 @@ interface AddDocumentProps {
 
 const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
   const { addDocuments, masterData, addMasterData, documents } = useDataStore();
-
   const defaultCategories = ["Personal", "Company", "Director"];
-
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [remoteDocTypes, setRemoteDocTypes] = useState<string[]>([]);
   const [remoteCategories, setRemoteCategories] = useState<string[]>([]);
-
   const [entries, setEntries] = useState<DocumentEntry[]>([
     {
       id: Math.random().toString(),
@@ -58,6 +55,14 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
       concernPersonMobile: "",
       concernPersonDepartment: "",
     },
+  ]);
+
+  const [companies, setCompanies] = useState([
+    "Botivate",
+    "Tata Insurance",
+    "Company A",
+    "Company B",
+    "Company C",
   ]);
 
   const typeOptions = useMemo(() => {
@@ -150,25 +155,34 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
       toast.error("You can add maximum 10 documents at a time.");
       return;
     }
-    setEntries((prev) => [
-      ...prev,
-      {
-        id: Math.random().toString(),
-        documentName: "",
-        documentType: "",
-        category: "",
-        name: "", // User entered name
-        companyName: "", // Company name from dropdown
-        needsRenewal: false,
-        renewalDate: "",
-        file: null,
-        fileName: "",
-        issueDate: "",
-        concernPersonName: "",
-        concernPersonMobile: "",
-        concernPersonDepartment: "",
-      },
-    ]);
+
+    // Get the last entry (most recently filled)
+    const lastEntry = entries[entries.length - 1];
+
+    // Create new entry with all data copied from last entry EXCEPT Document Name and File
+    const newEntry: DocumentEntry = {
+      id: Math.random().toString(),
+      documentName: "", // Document Name is left empty for user to fill
+      documentType: lastEntry.documentType || "", // Copy document type
+      category: lastEntry.category || "", // Copy category
+      name: lastEntry.name || "", // Copy name
+      companyName: lastEntry.companyName || "", // Copy company name
+      needsRenewal: lastEntry.needsRenewal || false, // Copy needs renewal
+      renewalDate: lastEntry.renewalDate || "", // Copy renewal date
+      file: null, // File is not copied
+      fileName: "", // File name is not copied
+      issueDate: lastEntry.issueDate || "", // Copy issue date
+      concernPersonName: lastEntry.concernPersonName || "", // Copy concern person name
+      concernPersonMobile: lastEntry.concernPersonMobile || "", // Copy concern person mobile
+      concernPersonDepartment: lastEntry.concernPersonDepartment || "", // Copy concern person department
+    };
+
+    setEntries((prev) => [...prev, newEntry]);
+
+    // Show toast notification
+    toast.success(
+      "Previous entry data copied to new form. Please fill Document Name.",
+    );
   };
 
   const removeEntry = (id: string) => {
@@ -190,21 +204,22 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Only Document Name is mandatory
     for (const entry of entries) {
-      if (
-        !entry.documentName ||
-        !entry.documentType ||
-        !entry.category ||
-        !entry.name || // Required: User entered name
-        !entry.companyName // Required: Company name from dropdown
-      ) {
-        toast.error("Please fill all required fields.");
+      if (!entry.documentName || entry.documentName.trim() === "") {
+        toast.error("Please fill Document Name for all entries.");
         return;
       }
+
+      // Only check renewal date if needsRenewal is true
       if (entry.needsRenewal && !entry.renewalDate) {
-        toast.error("Please select a renewal date.");
+        toast.error(
+          "Please select a renewal date for entries that need renewal.",
+        );
         return;
       }
+
+      // All other fields are optional - NO VALIDATION
     }
 
     setIsSubmitting(true);
@@ -252,20 +267,24 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
 
       // Process sequentially to ensure order in Google Sheets
       for (const [index, entry] of entries.entries()) {
-        const exists = masterData?.some(
-          (m) =>
-            m.companyName.toLowerCase() === entry.name.toLowerCase() && // Use 'name' for master data
-            m.documentType.toLowerCase() === entry.documentType.toLowerCase() &&
-            m.category.toLowerCase() === entry.category.toLowerCase(),
-        );
+        // Only add to master data if all three fields are filled
+        if (entry.name && entry.documentType && entry.category) {
+          const exists = masterData?.some(
+            (m) =>
+              m.companyName.toLowerCase() === entry.name.toLowerCase() &&
+              m.documentType.toLowerCase() ===
+                entry.documentType.toLowerCase() &&
+              m.category.toLowerCase() === entry.category.toLowerCase(),
+          );
 
-        if (!exists) {
-          addMasterData({
-            id: Math.random().toString(36).substr(2, 9),
-            companyName: entry.name, // Store 'name' in master data
-            documentType: entry.documentType,
-            category: entry.category,
-          });
+          if (!exists) {
+            addMasterData({
+              id: Math.random().toString(36).substr(2, 9),
+              companyName: entry.name,
+              documentType: entry.documentType,
+              category: entry.category,
+            });
+          }
         }
 
         // Assign Pre-calculated SN
@@ -313,31 +332,28 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
         // Format Issue Date: YYYY-MM-DD (ISO 8601 to avoid DD/MM vs MM/DD confusion)
         let formattedIssueDate = "";
         if (entry.issueDate) {
-          formattedIssueDate = entry.issueDate; // Already YYYY-MM-DD from input type="date"
+          formattedIssueDate = entry.issueDate;
         }
 
+        // Use empty strings for optional fields if not filled
         const sheetData = {
           Timestamp: formattedTimestamp,
           "Serial No": randomSN,
           "Document name": entry.documentName,
-          "Document Type": entry.documentType,
-          Category: entry.category,
-          Name: entry.name, // Column F: User entered name
+          "Document Type": entry.documentType || "", // Empty if not filled
+          Category: entry.category || "", // Empty if not filled
+          Name: entry.name || "", // Empty if not filled
           "Need Renewal": entry.needsRenewal ? "Yes" : "No",
           "Renewal Date": formattedRenewalDate,
           Image: fileUrl || "",
-          issueDate: formattedIssueDate, // Col M
-          concernPersonName: entry.concernPersonName || "", // Col N
-          concernPersonMobile: entry.concernPersonMobile || "", // Col O
-          concernPersonDepartment: entry.concernPersonDepartment || "", // Col P
-          CompanyName: entry.companyName, // Column Q: Company name from dropdown
+          issueDate: formattedIssueDate,
+          concernPersonName: entry.concernPersonName || "", // Empty if not filled
+          concernPersonMobile: entry.concernPersonMobile || "", // Empty if not filled
+          concernPersonDepartment: entry.concernPersonDepartment || "", // Empty if not filled
+          CompanyName: entry.companyName || "", // Empty if not filled
         };
 
         // 3. Submit Document
-        // Columns:
-        // A: Timestamp, B: SN, C: Doc Name, D: Doc Type, E: Category, F: Name, G: Need Renewal, H: Renewal Date, I: Image
-        // J: Status, K: Planned1, L: Actual1, M: Issue Date, N: Concern Name, O: Concern Mobile, P: Concern Dept, Q: Company Name
-        
         await submitToGoogleSheets({
           action: "insert",
           sheetName: "Documents",
@@ -361,16 +377,16 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
             sheetData.CompanyName, // Q: Company Name (from dropdown)
           ],
         });
-        
+
         // 4. Update Local State
         newDocuments.push({
           id: Math.random().toString(36).substr(2, 9),
           sn: randomSN,
           documentName: entry.documentName,
-          companyName: entry.name, // Store 'name' as companyName in local state (for backward compatibility)
-          pName: entry.name, // User entered name
-          documentType: entry.documentType,
-          category: entry.category,
+          companyName: entry.name || "", // Empty if not filled
+          pName: entry.name || "", // Empty if not filled
+          documentType: entry.documentType || "", // Empty if not filled
+          category: entry.category || "", // Empty if not filled
           needsRenewal: entry.needsRenewal,
           renewalDate: entry.needsRenewal ? entry.renewalDate : undefined,
           file: entry.fileName || null,
@@ -381,10 +397,10 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           concernPersonName: entry.concernPersonName,
           concernPersonMobile: entry.concernPersonMobile,
           concernPersonDepartment: entry.concernPersonDepartment,
-          companyBranch: entry.companyName, // Store company name as companyBranch
+          companyBranch: entry.companyName || "", // Empty if not filled
         });
       }
-      
+
       addDocuments(newDocuments);
       toast.success(`${newDocuments.length} Document(s) added successfully`);
       onClose();
@@ -445,6 +461,11 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                 <div className="flex justify-between items-center pb-1 mb-2 border-b border-gray-50">
                   <h3 className="text-xs font-bold tracking-wider text-gray-600 uppercase">
                     Document #{index + 1}
+                    {index > 0 && (
+                      <span className="ml-2 text-xs font-normal text-indigo-600">
+                        (Auto-filled from previous)
+                      </span>
+                    )}
                   </h3>
                   {entries.length > 1 && (
                     <button
@@ -459,7 +480,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
 
                 {/* Compact Grid: Gaps reduced */}
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {/* 1. Document Name (Input) */}
+                  {/* 1. Document Name (Input) - ONLY MANDATORY */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
                       Document Name <span className="text-red-500">*</span>
@@ -476,7 +497,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* 2. Document Type (Searchable) */}
+                  {/* 2. Document Type (Searchable) - OPTIONAL */}
                   <div>
                     <SearchableInput
                       compact
@@ -487,11 +508,10 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                       }
                       options={typeOptions}
                       placeholder="Select Type..."
-                      required
                     />
                   </div>
 
-                  {/* 3. Category (Searchable) */}
+                  {/* 3. Category (Searchable) - OPTIONAL */}
                   <div>
                     <SearchableInput
                       compact
@@ -502,19 +522,16 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                       }
                       options={categoryOptions}
                       placeholder="Select Category..."
-                      required
                     />
                   </div>
 
-                  {/* 4. Name (Input - user entered name) */}
+                  {/* 4. Name (Input - user entered name) - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      {getNameLabel(entry.category)}{" "}
-                      <span className="text-red-500">*</span>
+                      {getNameLabel(entry.category)}
                     </label>
                     <input
                       type="text"
-                      required
                       className="p-2 w-full text-xs font-medium rounded-lg border-none transition-colors outline-none shadow-input focus:ring-1 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
                       value={entry.name}
                       onChange={(e) =>
@@ -524,29 +541,45 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* 5. Company Name (Dropdown Field) */}
+                  {/* 5. Company Name (Dropdown Field) - OPTIONAL */}
+
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      Company Name <span className="text-red-500">*</span>
+                      Company Name
                     </label>
-                    <select
+
+                    <input
+                      list="company-list"
+                      placeholder="Type or select company"
                       className="p-2 w-full text-xs font-medium rounded-lg border-none transition-colors outline-none shadow-input focus:ring-1 focus:ring-indigo-500 bg-gray-50/50 focus:bg-white"
                       value={entry.companyName}
                       onChange={(e) =>
                         handleChange(entry.id, "companyName", e.target.value)
                       }
-                      required
-                    >
-                      <option value="">Select Company</option>
-                      <option value="Botivate">Botivate</option>
-                      <option value="Tata Insurance">Tata Insurance</option>
-                      <option value="Company A">Company A</option>
-                      <option value="Company B">Company B</option>
-                      <option value="Company C">Company C</option>
-                    </select>
+                      onBlur={() => {
+                        const value = entry.companyName?.trim();
+                        if (value && !companies.includes(value)) {
+                          setCompanies((prev) => [...prev, value]);
+                        }
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          const value = entry.companyName?.trim();
+                          if (value && !companies.includes(value)) {
+                            setCompanies((prev) => [...prev, value]);
+                          }
+                        }
+                      }}
+                    />
+
+                    <datalist id="company-list">
+                      {companies.map((company, index) => (
+                        <option key={index} value={company} />
+                      ))}
+                    </datalist>
                   </div>
 
-                  {/* 6. Needs Renewal & Date */}
+                  {/* 6. Needs Renewal & Date - OPTIONAL */}
                   <div className="flex gap-3 items-center p-2 rounded-lg border border-gray-100 bg-gray-50/50">
                     <label className="flex gap-2 items-center cursor-pointer select-none">
                       <input
@@ -579,13 +612,12 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                               e.target.value,
                             )
                           }
-                          required
                         />
                       </div>
                     )}
                   </div>
 
-                  {/* 7. Issue Date */}
+                  {/* 7. Issue Date - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
                       Issue Date
@@ -600,7 +632,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* 8. Concern Person Name */}
+                  {/* 8. Concern Person Name - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
                       Agent Name
@@ -620,10 +652,10 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* 9. Concern Person Mobile */}
+                  {/* 9. Concern Person Mobile - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      Concern Person Mobile
+                      Agent Mobile
                     </label>
                     <input
                       type="text"
@@ -640,7 +672,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                     />
                   </div>
 
-                  {/* 10. Concern Person Department */}
+                  {/* 10. Concern Person Department - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
                       Product Of
@@ -656,11 +688,10 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                           e.target.value,
                         )
                       }
-                      placeholder="Department"
                     />
                   </div>
 
-                  {/* 11. File Upload */}
+                  {/* 11. File Upload - OPTIONAL */}
                   <div>
                     <div className="relative">
                       <label className="block mb-1 text-xs font-semibold text-gray-600">
@@ -695,6 +726,9 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
               >
                 <Plus size={16} />
                 Add Another Document ({entries.length}/10)
+                <span className="text-xs text-indigo-400 ml-1">
+                  (Auto-fills from above)
+                </span>
               </button>
             </div>
           </form>

@@ -529,7 +529,7 @@ const AllDocuments = () => {
                       Agent Name
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
-                      Concern Mobile
+                      Agent Mobile Number
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
                       Product Of
