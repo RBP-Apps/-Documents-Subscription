@@ -60,10 +60,10 @@ const ShareModal: React.FC<ShareModalProps> = ({
             if (shouldUpdateSubject) {
                 if (isBatch && batchDocuments.length > 0) {
                     setSubject(`Sharing ${batchDocuments.length} Documents`);
-                    setMessage(`Please find attached ${batchDocuments.length} documents.`);
+                    setMessage(`Please find attached ${batchDocuments.length} documents. This link will expire in 10 days.`);
                 } else {
                     setSubject(`Sharing Document: ${documentName}`);
-                    setMessage(`Please find attached the document: ${documentName}`);
+                    setMessage(`Please find attached the document: ${documentName}. This link will expire in 10 days.`);
                 }
                 prevDocumentNameRef.current = documentName;
             }
@@ -81,9 +81,9 @@ const ShareModal: React.FC<ShareModalProps> = ({
         const whatsappMessage = generateWhatsAppMessage();
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
         
-        // Log the WhatsApp sharing activity
+        // Log the WhatsApp sharing activity with expiry
         if (isBatch && batchDocuments.length > 0) {
-            batchDocuments.forEach((doc, index) => {
+            batchDocuments.forEach((doc) => {
                 logSharingActivity({
                     recipientName: recipientName,
                     documentName: doc.documentName,
@@ -186,6 +186,13 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 body += `</div>`;
             }
 
+            // Add expiry notice to email body
+            body += `<div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-bottom: 20px;">`;
+            body += `<p style="margin: 0; color: #92400e; font-size: 14px;">`;
+            body += `<strong>⚠️ Important:</strong> This shared link will expire in 10 days (${new Date(new Date().getTime() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString()}).`;
+            body += `</p>`;
+            body += `</div>`;
+
             body += `<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 14px;">`;
             body += `<p>This document was shared via Document Management System</p>`;
             body += `<p>Shared by: ${recipientName || 'System User'}</p>`;
@@ -237,6 +244,11 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 whatsappMessage += `\n🔗 *Document Link:* ${fileContent}`;
             }
         }
+
+        // Add expiry notice to WhatsApp message
+        const expiryDate = new Date();
+        expiryDate.setDate(expiryDate.getDate() + 10);
+        whatsappMessage += `\n\n⏰ *Link Expiry:* This link will expire on ${expiryDate.toLocaleDateString()} (10 days from now)`;
 
         return whatsappMessage;
     };
@@ -601,6 +613,9 @@ const ShareModal: React.FC<ShareModalProps> = ({
                                     {isBatch ? `Email with ${batchDocuments.length} documents sent successfully!` : 'Email sent successfully!'}
                                 </span>
                             </div>
+                            <p className="text-xs text-green-600 mt-1">
+                                The shared link will expire in 10 days.
+                            </p>
                         </div>
                     )}
 

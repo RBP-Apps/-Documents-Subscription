@@ -398,6 +398,8 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           concernPersonMobile: entry.concernPersonMobile,
           concernPersonDepartment: entry.concernPersonDepartment,
           companyBranch: entry.companyName || "", // Empty if not filled
+          sharedExpiryDate: undefined,
+          lastSharedAt: "",
         });
       }
 
@@ -635,7 +637,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                   {/* 8. Concern Person Name - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      Agent Name
+                      Conser Person Name
                     </label>
                     <input
                       type="text"
@@ -655,7 +657,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                   {/* 9. Concern Person Mobile - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      Agent Mobile
+                      Conser Mobile
                     </label>
                     <input
                       type="text"
@@ -675,7 +677,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
                   {/* 10. Concern Person Department - OPTIONAL */}
                   <div>
                     <label className="block mb-1 text-xs font-semibold text-gray-600">
-                      Product Of
+                      Issue By
                     </label>
                     <input
                       type="text"

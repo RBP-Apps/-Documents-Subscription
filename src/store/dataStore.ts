@@ -2,6 +2,8 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
 export interface DocumentItem {
+  sharedExpiryDate: any;
+  lastSharedAt: string;
   id: string;
   sn: string; // Serial Number
   companyName: string; // User entered name (stored in column F)

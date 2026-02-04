@@ -155,14 +155,6 @@ const SharedDocuments = () => {
     fetchShareHistoryFromGoogleSheets();
   };
 
-  const isWithin15Days = (dateTime: string) => {
-    const itemDate = new Date(dateTime);
-    const now = new Date();
-    const diffTime = now.getTime() - itemDate.getTime();
-    const diffDays = diffTime / (1000 * 3600 * 24);
-    return diffDays <= 15;
-  };
-
   const handleDownload = (fileUrl: string) => {
     if (fileUrl && fileUrl !== "N/A") {
       window.open(fileUrl, "_blank");
@@ -229,7 +221,6 @@ const SharedDocuments = () => {
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-
           <button
             onClick={handleRefresh}
             className="flex items-center gap-2 px-4 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-sm hover:shadow"
@@ -276,109 +267,104 @@ const SharedDocuments = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {filteredData.map((item) => {
-                const hasValidFile =
-                  item.docFile &&
-                  item.docFile !== "N/A" &&
-                  item.docFile.startsWith("http");
-                const within15Days = isWithin15Days(item.dateTime);
-                const canDownload = hasValidFile && within15Days;
-                return (
-                  <tr
-                    key={item.id}
-                    className="hover:bg-indigo-50/10 transition-colors"
-                  >
-                    <td className="p-3 text-sm font-medium text-indigo-600">
-                      {item.shareNo}
-                    </td>
-                    <td className="p-3 text-sm text-gray-600 whitespace-nowrap">
-                      {item.dateTime ? formatDate(item.dateTime) : "N/A"}
-                    </td>
-                    <td className="p-3 text-sm text-gray-900 font-mono">
-                      {item.docSerial}
-                    </td>
-                    <td className="p-3 text-sm text-gray-900">
-                      <div className="flex items-center gap-2">
-                        <FileText size={16} className="text-gray-400" />
-                        <span
-                          className="truncate max-w-[180px]"
-                          title={item.docName}
-                        >
-                          {item.docName}
-                        </span>
-                      </div>
-                      {item.documentType && (
-                        <span className="text-xs text-gray-400 block mt-1">
-                          {item.documentType}
-                        </span>
-                      )}
-                    </td>
-                    <td className="p-3">
-                      <button
-                        onClick={() => handleDownload(item.docFile)}
-                        className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors ${
-                          canDownload
-                            ? "text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100"
-                            : "text-gray-400 bg-gray-100 cursor-not-allowed"
-                        }`}
-                        disabled={!canDownload}
+              {filteredData.map((item) => (
+                <tr
+                  key={item.id}
+                  className="hover:bg-indigo-50/10 transition-colors"
+                >
+                  <td className="p-3 text-sm font-medium text-indigo-600">
+                    {item.shareNo}
+                  </td>
+                  <td className="p-3 text-sm text-gray-600 whitespace-nowrap">
+                    {item.dateTime ? formatDate(item.dateTime) : "N/A"}
+                  </td>
+                  <td className="p-3 text-sm text-gray-900 font-mono">
+                    {item.docSerial}
+                  </td>
+                  <td className="p-3 text-sm text-gray-900">
+                    <div className="flex items-center gap-2">
+                      <FileText size={16} className="text-gray-400" />
+                      <span
+                        className="truncate max-w-[180px]"
+                        title={item.docName}
                       >
-                        <Download size={14} />
-                        {canDownload
-                          ? "View File"
-                          : hasValidFile
-                            ? "Expired"
-                            : "No File"}
-                      </button>
-                    </td>
-                    <td className="p-3 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        {item.sharedVia === "Email" ||
-                        item.sharedVia === "Email" ? (
-                          <Mail size={16} className="text-blue-500" />
-                        ) : item.sharedVia === "WhatsApp" ||
-                          item.sharedVia === "WhatsApp" ? (
-                          <MessageCircle size={16} className="text-green-500" />
-                        ) : item.sharedVia === "Both" ? (
-                          <div className="flex items-center gap-1">
-                            <Mail size={14} className="text-blue-500" />
-                            <MessageCircle
-                              size={14}
-                              className="text-green-500"
-                            />
-                          </div>
-                        ) : null}
-                        {item.sharedVia}
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm text-gray-900 font-medium">
-                      {item.recipientName}
-                    </td>
-                    <td className="p-3 text-sm text-gray-500 whitespace-nowrap">
-                      <div className="flex flex-col">
-                        <span>{item.contactInfo}</span>
-                        {item.email &&
-                          item.shareMethod !== "Email" &&
-                          item.shareMethod !== "Both" && (
-                            <span className="text-xs text-gray-400">
-                              Email: {item.email}
-                            </span>
-                          )}
-                        {item.number &&
-                          item.shareMethod !== "WhatsApp" &&
-                          item.shareMethod !== "Both" && (
-                            <span className="text-xs text-gray-400">
-                              WhatsApp: {item.number}
-                            </span>
-                          )}
-                      </div>
-                    </td>
-                    <td className="p-3 text-sm text-gray-400">
-                      {item.sourceSheet}
-                    </td>
-                  </tr>
-                );
-              })}
+                        {item.docName}
+                      </span>
+                    </div>
+                    {item.documentType && (
+                      <span className="text-xs text-gray-400 block mt-1">
+                        {item.documentType}
+                      </span>
+                    )}
+                  </td>
+                  <td className="p-3">
+                    <button
+                      onClick={() => handleDownload(item.docFile)}
+                      className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-lg transition-colors ${
+                        item.docFile &&
+                        item.docFile !== "N/A" &&
+                        item.docFile.startsWith("http")
+                          ? "text-indigo-600 hover:text-indigo-800 bg-indigo-50 hover:bg-indigo-100"
+                          : "text-gray-400 bg-gray-100 cursor-not-allowed"
+                      }`}
+                      disabled={
+                        !item.docFile ||
+                        item.docFile === "N/A" ||
+                        !item.docFile.startsWith("http")
+                      }
+                    >
+                      <Download size={14} />
+                      {item.docFile &&
+                      item.docFile !== "N/A" &&
+                      item.docFile.startsWith("http")
+                        ? "View File"
+                        : "No File"}
+                    </button>
+                  </td>
+                  <td className="p-3 text-sm text-gray-600">
+                    <div className="flex items-center gap-2">
+                      {item.sharedVia === "Email" ||
+                      item.sharedVia === "Email" ? (
+                        <Mail size={16} className="text-blue-500" />
+                      ) : item.sharedVia === "WhatsApp" ||
+                        item.sharedVia === "WhatsApp" ? (
+                        <MessageCircle size={16} className="text-green-500" />
+                      ) : item.sharedVia === "Both" ? (
+                        <div className="flex items-center gap-1">
+                          <Mail size={14} className="text-blue-500" />
+                          <MessageCircle size={14} className="text-green-500" />
+                        </div>
+                      ) : null}
+                      {item.sharedVia}
+                    </div>
+                  </td>
+                  <td className="p-3 text-sm text-gray-900 font-medium">
+                    {item.recipientName}
+                  </td>
+                  <td className="p-3 text-sm text-gray-500 whitespace-nowrap">
+                    <div className="flex flex-col">
+                      <span>{item.contactInfo}</span>
+                      {item.email &&
+                        item.shareMethod !== "Email" &&
+                        item.shareMethod !== "Both" && (
+                          <span className="text-xs text-gray-400">
+                            Email: {item.email}
+                          </span>
+                        )}
+                      {item.number &&
+                        item.shareMethod !== "WhatsApp" &&
+                        item.shareMethod !== "Both" && (
+                          <span className="text-xs text-gray-400">
+                            WhatsApp: {item.number}
+                          </span>
+                        )}
+                    </div>
+                  </td>
+                  <td className="p-3 text-sm text-gray-400">
+                    {item.sourceSheet}
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -403,115 +389,112 @@ const SharedDocuments = () => {
 
       {/* Mobile View */}
       <div className="md:hidden space-y-4">
-        {filteredData.map((item) => {
-          const hasValidFile =
-            item.docFile &&
-            item.docFile !== "N/A" &&
-            item.docFile.startsWith("http");
-          const within15Days = isWithin15Days(item.dateTime);
-          const canDownload = hasValidFile && within15Days;
-          return (
-            <div
-              key={item.id}
-              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3"
-            >
-              <div className="flex justify-between items-start">
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
-                    {item.shareNo}
-                  </span>
-                  <p className="text-xs text-gray-400">
-                    {item.dateTime ? formatDate(item.dateTime) : "N/A"}
-                  </p>
-                </div>
-                <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
-                  {item.sourceSheet}
+        {filteredData.map((item) => (
+          <div
+            key={item.id}
+            className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex flex-col gap-3"
+          >
+            <div className="flex justify-between items-start">
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded">
+                  {item.shareNo}
                 </span>
+                <p className="text-xs text-gray-400">
+                  {item.dateTime ? formatDate(item.dateTime) : "N/A"}
+                </p>
+              </div>
+              <span className="text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
+                {item.sourceSheet}
+              </span>
+            </div>
+
+            <div className="border-t border-gray-50 pt-3 flex flex-col space-y-2.5">
+              <div className="flex items-start justify-between">
+                <span className="text-xs text-gray-500">Document:</span>
+                <div className="text-right">
+                  <span className="text-sm font-medium text-gray-900 block">
+                    {item.docName}
+                  </span>
+                  {item.documentType && (
+                    <span className="text-xs text-gray-400 block">
+                      {item.documentType}
+                    </span>
+                  )}
+                  <span className="text-[10px] text-gray-400 font-mono block">
+                    {item.docSerial}
+                  </span>
+                </div>
               </div>
 
-              <div className="border-t border-gray-50 pt-3 flex flex-col space-y-2.5">
-                <div className="flex items-start justify-between">
-                  <span className="text-xs text-gray-500">Document:</span>
-                  <div className="text-right">
-                    <span className="text-sm font-medium text-gray-900 block">
-                      {item.docName}
-                    </span>
-                    {item.documentType && (
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Recipient:</span>
+                <div className="text-right">
+                  <span className="text-sm text-gray-900 block">
+                    {item.recipientName}
+                  </span>
+                  <span className="text-xs text-gray-400 block">
+                    {item.contactInfo}
+                  </span>
+                  {item.email &&
+                    item.shareMethod !== "Email" &&
+                    item.shareMethod !== "Both" && (
                       <span className="text-xs text-gray-400 block">
-                        {item.documentType}
+                        Email: {item.email}
                       </span>
                     )}
-                    <span className="text-[10px] text-gray-400 font-mono block">
-                      {item.docSerial}
-                    </span>
-                  </div>
+                  {item.number &&
+                    item.shareMethod !== "WhatsApp" &&
+                    item.shareMethod !== "Both" && (
+                      <span className="text-xs text-gray-400 block">
+                        WhatsApp: {item.number}
+                      </span>
+                    )}
                 </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Recipient:</span>
-                  <div className="text-right">
-                    <span className="text-sm text-gray-900 block">
-                      {item.recipientName}
-                    </span>
-                    <span className="text-xs text-gray-400 block">
-                      {item.contactInfo}
-                    </span>
-                    {item.email &&
-                      item.shareMethod !== "Email" &&
-                      item.shareMethod !== "Both" && (
-                        <span className="text-xs text-gray-400 block">
-                          Email: {item.email}
-                        </span>
-                      )}
-                    {item.number &&
-                      item.shareMethod !== "WhatsApp" &&
-                      item.shareMethod !== "Both" && (
-                        <span className="text-xs text-gray-400 block">
-                          WhatsApp: {item.number}
-                        </span>
-                      )}
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">Shared Via:</span>
-                  <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                    {item.sharedVia === "Email" ||
-                    item.sharedVia === "Email" ? (
-                      <Mail size={14} className="text-blue-500" />
-                    ) : item.sharedVia === "WhatsApp" ||
-                      item.sharedVia === "WhatsApp" ? (
-                      <MessageCircle size={14} className="text-green-500" />
-                    ) : item.sharedVia === "Both" ? (
-                      <div className="flex items-center gap-1">
-                        <Mail size={12} className="text-blue-500" />
-                        <MessageCircle size={12} className="text-green-500" />
-                      </div>
-                    ) : null}
-                    {item.sharedVia}
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => handleDownload(item.docFile)}
-                  className={`w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-colors ${
-                    canDownload
-                      ? "bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-800"
-                      : "bg-gray-100 text-gray-400 cursor-not-allowed"
-                  }`}
-                  disabled={!canDownload}
-                >
-                  <Download size={14} />
-                  {canDownload
-                    ? "View Document File"
-                    : hasValidFile
-                      ? "Expired"
-                      : "No File Available"}
-                </button>
               </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-xs text-gray-500">Shared Via:</span>
+                <div className="flex items-center gap-1.5 text-sm text-gray-700">
+                  {item.sharedVia === "Email" || item.sharedVia === "Email" ? (
+                    <Mail size={14} className="text-blue-500" />
+                  ) : item.sharedVia === "WhatsApp" ||
+                    item.sharedVia === "WhatsApp" ? (
+                    <MessageCircle size={14} className="text-green-500" />
+                  ) : item.sharedVia === "Both" ? (
+                    <div className="flex items-center gap-1">
+                      <Mail size={12} className="text-blue-500" />
+                      <MessageCircle size={12} className="text-green-500" />
+                    </div>
+                  ) : null}
+                  {item.sharedVia}
+                </div>
+              </div>
+
+              <button
+                onClick={() => handleDownload(item.docFile)}
+                className={`w-full mt-2 flex items-center justify-center gap-2 py-2 rounded-lg text-xs font-medium transition-colors ${
+                  item.docFile &&
+                  item.docFile !== "N/A" &&
+                  item.docFile.startsWith("http")
+                    ? "bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-800"
+                    : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                }`}
+                disabled={
+                  !item.docFile ||
+                  item.docFile === "N/A" ||
+                  !item.docFile.startsWith("http")
+                }
+              >
+                <Download size={14} />
+                {item.docFile &&
+                item.docFile !== "N/A" &&
+                item.docFile.startsWith("http")
+                  ? "View Document File"
+                  : "No File Available"}
+              </button>
             </div>
-          );
-        })}
+          </div>
+        ))}
 
         {filteredData.length === 0 && searchTerm ? (
           <div className="p-8 text-center text-gray-500 bg-white rounded-xl border border-gray-100">
@@ -534,5 +517,4 @@ const SharedDocuments = () => {
     </div>
   );
 };
-
 export default SharedDocuments;

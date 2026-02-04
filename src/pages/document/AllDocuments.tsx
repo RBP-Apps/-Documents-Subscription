@@ -234,7 +234,8 @@ const AllDocuments = () => {
     }
   };
 
-  // Updated openShare function to handle batch
+  // Updated openShare function with 10 days expiry
+
   const openShare = (
     type: "email" | "whatsapp" | "both",
     doc: {
@@ -247,11 +248,20 @@ const AllDocuments = () => {
     },
   ) => {
     setShareType(type);
-    setShareDoc(doc);
+
+    setShareDoc({
+      ...doc,
+      // Automatically set 10 days expiry for all shares
+      document: doc.document ? {
+        ...doc.document,
+        sharedExpiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString() // 10 days from now
+      } : doc.document
+    });
+ 
     setIsShareModalOpen(true);
   };
 
-  // Function to handle batch sharing
+  // Function to handle batch sharing with expiry
   const handleBatchShare = (type: "email" | "whatsapp") => {
     const selectedDocuments = filteredData.filter((d) => selectedIds.has(d.id));
 
@@ -272,14 +282,19 @@ const AllDocuments = () => {
       });
     } else {
       // Multiple documents selected - batch mode
+      const docsWithExpiry = selectedDocuments.map(doc => ({
+        ...doc,
+        sharedExpiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+      }));
+      
       openShare(type, {
         id: "batch",
         name: `${selectedIds.size} Documents`,
         isBatch: true,
-        batchDocuments: selectedDocuments,
+        batchDocuments: docsWithExpiry,
         // Include first document for reference
-        document: selectedDocuments[0],
-        fileContent: selectedDocuments[0]?.fileContent,
+        document: docsWithExpiry[0],
+        fileContent: docsWithExpiry[0]?.fileContent,
       });
     }
   };
@@ -526,13 +541,13 @@ const AllDocuments = () => {
                       File
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
-                      Agent Name
+                      Concern Person Name
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
-                      Agent Mobile Number
+                      Concern Mobile Number
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
-                      Product Of
+                      Issued by
                     </th>
                     <th className="px-3 py-2 whitespace-nowrap bg-gray-50 text-center">
                       Company Name
