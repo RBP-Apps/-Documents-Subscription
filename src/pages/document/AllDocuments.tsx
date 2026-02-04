@@ -125,7 +125,7 @@ const AllDocuments = () => {
     });
 
 
-  console.log("FILTERED DATA:", filteredData);  
+  // console.log("FILTERED DATA:", filteredData);  
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const toggleSelection = (id: string) => {
