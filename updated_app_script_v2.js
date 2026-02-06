@@ -11,9 +11,14 @@
 // -----------------------------------------------------------------------------
 
 const SPREADSHEET_ID = "1M1yQCmHlROwpZE2ZBv_dvSbCyEB5dyTRNNDAcZFyaa0";
+const SCRIPT_VERSION = "v3.0.0"; // Increment this to verify deployment
 
 // Helper function to create JSON response
 function createJsonResponse(data, statusCode = 200) {
+    // Add version to every response for debugging
+    if (typeof data === 'object' && data !== null) {
+        data._version = SCRIPT_VERSION;
+    }
     const output = ContentService.createTextOutput(JSON.stringify(data));
     output.setMimeType(ContentService.MimeType.JSON);
     return output;
@@ -498,6 +503,83 @@ function doOptions() {
     return createJsonResponse({});
 }
 
+
+// Helper to generate next Serial Number safely
+function getNextSerialNumber(sheet) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return "SN-001";
+
+    const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    let maxSn = 0;
+
+    for (let i = 0; i < values.length; i++) {
+        const sn = values[i][0];
+        if (sn && typeof sn === 'string' && sn.trim().startsWith("SN-")) {
+            const part = sn.trim().replace("SN-", "");
+            const numPart = parseInt(part, 10);
+            if (!isNaN(numPart) && numPart > maxSn) {
+                maxSn = numPart;
+            }
+        }
+    }
+
+    const nextVal = maxSn + 1;
+    return "SN-" + nextVal.toString().padStart(3, "0");
+}
+
+// Helper to generate next Subscription Number safely (SUB-XXX)
+function getNextSubscriptionNumber(sheet) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return "SUB-001";
+
+    const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    let maxSn = 0;
+
+    for (let i = 0; i < values.length; i++) {
+        const sn = values[i][0];
+        if (sn && typeof sn === 'string') {
+            const trimmedSn = sn.trim().toUpperCase();
+            if (trimmedSn.startsWith("SUB-")) {
+                const part = trimmedSn.replace("SUB-", "");
+                const numPart = parseInt(part, 10);
+                if (!isNaN(numPart) && numPart > maxSn) {
+                    maxSn = numPart;
+                }
+            }
+        }
+    }
+
+    const nextVal = maxSn + 1;
+    return "SUB-" + nextVal.toString().padStart(3, "0");
+}
+
+// Helper to generate next Loan Number safely (SN-XXX) for Loan sheet
+// Assuming Loan sheet uses "SN-" prefix as per user request
+function getNextLoanNumber(sheet) {
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) return "SN-001";
+
+    const values = sheet.getRange(2, 2, lastRow - 1, 1).getValues();
+    let maxSn = 0;
+
+    for (let i = 0; i < values.length; i++) {
+        const sn = values[i][0];
+        if (sn && typeof sn === 'string') {
+            const trimmedSn = sn.trim().toUpperCase();
+            if (trimmedSn.startsWith("SN-")) {
+                const part = trimmedSn.replace("SN-", "");
+                const numPart = parseInt(part, 10);
+                if (!isNaN(numPart) && numPart > maxSn) {
+                    maxSn = numPart;
+                }
+            }
+        }
+    }
+
+    const nextVal = maxSn + 1;
+    return "SN-" + nextVal.toString().padStart(3, "0");
+}
+
 // Main doPost function
 function doPost(e) {
     try {
@@ -657,13 +739,48 @@ function doPost(e) {
         }
 
         if (action === 'insert') {
-            var rowData = JSON.parse(params.rowData);
-            const lastRow = sheet.getLastRow();
-            sheet.getRange(lastRow + 1, 1, 1, rowData.length).setValues([rowData]);
-            return createJsonResponse({
-                success: true,
-                message: "Data inserted successfully"
-            });
+            // Use LockService to prevent race conditions
+            var lock = LockService.getScriptLock();
+            // Wait for up to 30 seconds for other processes to finish.
+            lock.waitLock(30000);
+
+            try {
+                var rowData = JSON.parse(params.rowData);
+
+                // Only generate SN for "Documents" sheet (Column B check)
+                if (sheetName === "Documents") {
+                    var newSN = getNextSerialNumber(sheet);
+                    // Overwrite the SN in index 1 (Column B)
+                    rowData[1] = newSN;
+                }
+                // Handle "Subscription" sheet SN generation (SUB-XXX)
+                else if (sheetName === "Subscription") {
+                    var newSN = getNextSubscriptionNumber(sheet);
+                    rowData[1] = newSN;
+                }
+                // Handle "Loan" sheet SN generation (SN-XXX)
+                // Case-insensitive check to be safe
+                else if (sheetName.trim().toLowerCase() === "loan") {
+                    console.log("Generating SN for Loan sheet");
+                    var newSN = getNextLoanNumber(sheet);
+                    console.log("Generated Loan SN:", newSN);
+                    rowData[1] = newSN;
+                }
+
+                const lastRow = sheet.getLastRow();
+                sheet.getRange(lastRow + 1, 1, 1, rowData.length).setValues([rowData]);
+
+                return createJsonResponse({
+                    success: true,
+                    message: "Data inserted successfully",
+                    // Return the generated SN so the client knows what happened
+                    serialNo: (sheetName === "Documents" || sheetName === "Subscription" || sheetName.trim().toLowerCase() === "loan") ? rowData[1] : undefined,
+                    _version: SCRIPT_VERSION
+                });
+            } finally {
+                // Must release the lock
+                lock.releaseLock();
+            }
         }
         else if (action === 'update') {
             // Update an existing row

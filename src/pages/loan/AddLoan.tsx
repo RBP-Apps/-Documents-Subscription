@@ -10,7 +10,7 @@ interface AddLoanProps {
 }
 
 const AddLoan: React.FC<AddLoanProps> = ({ isOpen, onClose }) => {
-  const { loans, addLoan } = useDataStore();
+  const { addLoan } = useDataStore();
   const [formData, setFormData] = useState({
     loanName: '',
     bankName: '',
@@ -71,15 +71,10 @@ const AddLoan: React.FC<AddLoanProps> = ({ isOpen, onClose }) => {
         }
       }
 
-      // 2. Auto-generate SN-xxx (Max based)
-      const maxSn = loans.reduce((max, loan) => {
-        const match = loan.sn.match(/(\d+)/);
-        const num = match ? parseInt(match[0], 10) : 0;
-        return num > max ? num : max;
-      }, 0);
-      
-      const nextNum = maxSn + 1;
-      const sn = `SN-${String(nextNum).padStart(3, '0')}`;
+      // 2. Auto-generate SN-xxx (Backend handled now)
+      // const maxSn = loans.reduce((max, loan) => { ... })
+
+      const sn = ""; // Empty: Backend MUST generate this. 
       const now = new Date();
       const timestamp = `${String(now.getMonth() + 1).padStart(2, '0')}/${String(now.getDate()).padStart(2, '0')}/${now.getFullYear()}, ${now.toLocaleTimeString('en-GB', { hour12: false })}`;
 
@@ -106,15 +101,43 @@ const AddLoan: React.FC<AddLoanProps> = ({ isOpen, onClose }) => {
       });
 
       if (result.success) {
+        // CHECK FOR BACKEND VERSION
+        // If the response doesn't have the _version property (added in v3.0.0), the deployment is old.
+        if (!result._version) {
+          toast.error(
+            <div>
+              <b>DEPLOYMENT UPDATE REQUIRED</b>
+              <br />
+              Refused to save proper Serial No because Google Apps Script is outdated.
+              <br />
+              Please go to Apps Script {">"} Deploy {">"} New Version.
+            </div>,
+            { duration: 6000 }
+          );
+          // Still clear form locally but warn user
+        }
+
+        const serverSN = result.serialNo;
+
         const newItem: LoanItem = {
           id: Math.random().toString(36).substr(2, 9),
-          sn,
+          sn: serverSN || "Processing...", // Ui placeholder
           Timestamp: timestamp,
           ...formData,
           file: driveFileUrl || formData.file // Prefer Drive URL
         };
         addLoan(newItem);
-        toast.success('Loan added and saved to Google Sheets');
+
+        if (serverSN) {
+          toast.success(`Loan added successfully! Serial No: ${serverSN}`);
+        } else {
+          // If version check failed earlier, this logic naturally follows context
+          if (!result._version) {
+            toast("Entry saved without Serial No (Old Script Version)", { icon: '⚠️' });
+          } else {
+            toast.success('Loan saved! Refreshing sheet to see Serial No...');
+          }
+        }
         onClose();
         setFormData({
           loanName: '',

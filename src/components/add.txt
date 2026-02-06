@@ -6,6 +6,7 @@ import SearchableInput from "../../components/SearchableInput";
 import {
   fetchMasterFromGoogleSheets,
   submitToGoogleSheets,
+  fetchDocumentsFromGoogleSheets,
 } from "../../utils/googleSheetsService";
 
 interface DocumentEntry {
@@ -13,8 +14,8 @@ interface DocumentEntry {
   documentName: string;
   documentType: string;
   category: string;
-  name: string; // The "Name" field (user entered name)
-  companyName: string; // Company name from dropdown
+  name: string;
+  companyName: string;
   needsRenewal: boolean;
   renewalDate?: string;
   file: File | null;
@@ -31,8 +32,51 @@ interface AddDocumentProps {
   onClose: () => void;
 }
 
+// NEW: Function to get serial numbers from backend
+const getSerialNumbersFromBackend = async (prefix: string, count: number): Promise<string[]> => {
+  try {
+    const scriptURL = import.meta.env.VITE_GOOGLE_APPS_SCRIPT_URL;
+    
+    if (!scriptURL || scriptURL.includes("undefined")) {
+      throw new Error("Backend URL not configured. Please set VITE_GOOGLE_APPS_SCRIPT_URL");
+    }
+    
+    console.log(`🔹 Requesting ${count} SNs with prefix ${prefix}`);
+    
+    const formData = new FormData();
+    formData.append('action', 'handleSerialNumbers');
+    formData.append('prefix', prefix);
+    formData.append('count', count.toString());
+    formData.append('generatedBy', 'Web Form');
+    
+    const response = await fetch(scriptURL, {
+      method: 'POST',
+      body: formData
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const text = await response.text();
+    console.log("🔹 Backend response:", text);
+    
+    const data = JSON.parse(text);
+    
+    if (data.success && data.serialNumbers && Array.isArray(data.serialNumbers)) {
+      console.log(`✅ Received SNs: ${data.serialNumbers.join(', ')}`);
+      return data.serialNumbers;
+    } else {
+      throw new Error(data.error || 'Failed to get serial numbers');
+    }
+  } catch (error) {
+    console.error('❌ Error getting serial numbers:', error);
+    throw error;
+  }
+};
+
 const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
-  const { addDocuments, masterData, addMasterData } = useDataStore();
+  const { addDocuments, masterData, addMasterData, documents } = useDataStore();
   const defaultCategories = ["Personal", "Company", "Director"];
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [remoteDocTypes, setRemoteDocTypes] = useState<string[]>([]);
@@ -43,8 +87,8 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
       documentName: "",
       documentType: "",
       category: "",
-      name: "", // User entered name
-      companyName: "", // Company name from dropdown
+      name: "",
+      companyName: "",
       needsRenewal: false,
       renewalDate: "",
       file: null,
@@ -136,11 +180,11 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           prev.map((item) =>
             item.id === id
               ? {
-                ...item,
-                file: file,
-                fileName: file.name,
-                fileContent: reader.result as string,
-              }
+                  ...item,
+                  file: file,
+                  fileName: file.name,
+                  fileContent: reader.result as string,
+                }
               : item,
           ),
         );
@@ -155,30 +199,27 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
       return;
     }
 
-    // Get the last entry (most recently filled)
     const lastEntry = entries[entries.length - 1];
 
-    // Create new entry with all data copied from last entry EXCEPT Document Name and File
     const newEntry: DocumentEntry = {
       id: Math.random().toString(),
-      documentName: "", // Document Name is left empty for user to fill
-      documentType: lastEntry.documentType || "", // Copy document type
-      category: lastEntry.category || "", // Copy category
-      name: lastEntry.name || "", // Copy name
-      companyName: lastEntry.companyName || "", // Copy company name
-      needsRenewal: lastEntry.needsRenewal || false, // Copy needs renewal
-      renewalDate: lastEntry.renewalDate || "", // Copy renewal date
-      file: null, // File is not copied
-      fileName: "", // File name is not copied
-      issueDate: lastEntry.issueDate || "", // Copy issue date
-      concernPersonName: lastEntry.concernPersonName || "", // Copy concern person name
-      concernPersonMobile: lastEntry.concernPersonMobile || "", // Copy concern person mobile
-      concernPersonDepartment: lastEntry.concernPersonDepartment || "", // Copy concern person department
+      documentName: "",
+      documentType: lastEntry.documentType || "",
+      category: lastEntry.category || "",
+      name: lastEntry.name || "",
+      companyName: lastEntry.companyName || "",
+      needsRenewal: lastEntry.needsRenewal || false,
+      renewalDate: lastEntry.renewalDate || "",
+      file: null,
+      fileName: "",
+      issueDate: lastEntry.issueDate || "",
+      concernPersonName: lastEntry.concernPersonName || "",
+      concernPersonMobile: lastEntry.concernPersonMobile || "",
+      concernPersonDepartment: lastEntry.concernPersonDepartment || "",
     };
 
     setEntries((prev) => [...prev, newEntry]);
 
-    // Show toast notification
     toast.success(
       "Previous entry data copied to new form. Please fill Document Name.",
     );
@@ -200,238 +241,277 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
     return "Name";
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-    // Only Document Name is mandatory
-    for (const entry of entries) {
-      if (!entry.documentName || entry.documentName.trim() === "") {
-        toast.error("Please fill Document Name for all entries.");
-        return;
-      }
-
-      // Only check renewal date if needsRenewal is true
-      if (entry.needsRenewal && !entry.renewalDate) {
-        toast.error(
-          "Please select a renewal date for entries that need renewal.",
-        );
-        return;
-      }
-
-      // All other fields are optional - NO VALIDATION
+  // Validation remains the same
+  for (const entry of entries) {
+    if (!entry.documentName || entry.documentName.trim() === "") {
+      toast.error("Please fill Document Name for all entries.");
+      return;
     }
 
-    setIsSubmitting(true);
+    if (entry.needsRenewal && !entry.renewalDate) {
+      toast.error(
+        "Please select a renewal date for entries that need renewal.",
+      );
+      return;
+    }
+  }
 
-    // FETCH LATEST DATA: Critical for multi-user SN generation
-    // Frontend SN generation removed
+  setIsSubmitting(true);
 
-    const folderId = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
-
-
+  // STEP 1: Get serial numbers from backend
+  let snList: string[] = [];
+  try {
+    console.log("🔹 Requesting serial numbers from backend...");
+    const prefix = "SN";
+    snList = await getSerialNumbersFromBackend(prefix, entries.length);
+    console.log("✅ Serial numbers allocated:", snList);
+    
+    if (snList.length !== entries.length) {
+      throw new Error(`Requested ${entries.length} SNs but got ${snList.length}`);
+    }
+  } catch (error) {
+    console.error("❌ Failed to get serial numbers:", error);
+    
+    // Fallback: Generate locally based on existing data
+    console.log("🔄 Using local fallback for SN generation...");
+    
+    let maxSn = 0;
     try {
-      const newDocuments: DocumentItem[] = [];
-
-      // Create an array to store file upload results
-      const uploadResults: Array<{ index: number, fileUrl: string | null }> = [];
-
-      // First, upload all files sequentially with delay
-      for (let i = 0; i < entries.length; i++) {
-        const entry = entries[i];
-
-        if (entry.file && entry.fileContent && folderId) {
-          try {
-            // Add delay between uploads (1 second gap) to avoid Google Drive rate limits
-            if (i > 0) {
-              await new Promise(resolve => setTimeout(resolve, 1000));
-            }
-
-            console.log(`Uploading file ${i + 1}: ${entry.fileName}`);
-
-            const uploadRes = await submitToGoogleSheets({
-              action: "uploadFile",
-              sheetName: "Documents",
-              data: {
-                base64Data: entry.fileContent,
-                fileName: entry.fileName,
-                mimeType: entry.file.type,
-                folderId: folderId,
-              },
-            });
-
-            if (uploadRes && uploadRes.fileUrl) {
-              console.log(`✅ Upload successful for file ${i + 1}`);
-              uploadResults.push({ index: i, fileUrl: uploadRes.fileUrl });
-            } else {
-              console.error(`❌ Upload failed for file ${i + 1}`);
-              uploadResults.push({ index: i, fileUrl: null });
-              toast.error(`File ${entry.fileName} upload failed. Saving without file.`);
-            }
-          } catch (uploadErr) {
-            console.error(`❌ Upload error for file ${i + 1}:`, uploadErr);
-            uploadResults.push({ index: i, fileUrl: null });
-            toast.error(`Failed to upload ${entry.fileName}, saving without file.`);
-          }
-        } else {
-          uploadResults.push({ index: i, fileUrl: null });
-        }
-      }
-
-      // Now process all entries with their respective file URLs
-      for (const [index, entry] of entries.entries()) {
-        // Only add to master data if all three fields are filled
-        if (entry.name && entry.documentType && entry.category) {
-          const exists = masterData?.some(
-            (m) =>
-              m.companyName.toLowerCase() === entry.name.toLowerCase() &&
-              m.documentType.toLowerCase() ===
-              entry.documentType.toLowerCase() &&
-              m.category.toLowerCase() === entry.category.toLowerCase(),
-          );
-
-          if (!exists) {
-            addMasterData({
-              id: Math.random().toString(36).substr(2, 9),
-              companyName: entry.name,
-              documentType: entry.documentType,
-              category: entry.category,
-            });
+      const allDocs = await fetchDocumentsFromGoogleSheets();
+      
+      allDocs.forEach((d: DocumentItem) => {
+        if (d.sn && d.sn.trim().startsWith("SN-")) {
+          const part = d.sn.trim().replace("SN-", "");
+          const n = parseInt(part, 10);
+          if (!isNaN(n) && n > maxSn) {
+            maxSn = n;
           }
         }
-
-
-
-        // Get file URL from upload results
-        const uploadResult = uploadResults.find(r => r.index === index);
-        const fileUrl = uploadResult?.fileUrl || "";
-
-        // 2. Prepare Payload
-        const now = new Date();
-        const formattedTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
-
-        // Format Renewal Date: YYYY-MM-DD HH:mm (For Google Sheets Formulas)
-        let formattedRenewalDate = "";
-        if (entry.renewalDate) {
-          const hours = String(now.getHours()).padStart(2, "0");
-          const minutes = String(now.getMinutes()).padStart(2, "0");
-          formattedRenewalDate = `${entry.renewalDate} ${hours}:${minutes}`;
+      });
+    } catch (err) {
+      console.warn("Could not fetch documents for fallback:", err);
+      // Use local store as fallback
+      documents.forEach((d) => {
+        if (d.sn && d.sn.trim().startsWith("SN-")) {
+          const part = d.sn.trim().replace("SN-", "");
+          const n = parseInt(part, 10);
+          if (!isNaN(n) && n > maxSn) {
+            maxSn = n;
+          }
         }
+      });
+    }
+    
+    for (let i = 0; i < entries.length; i++) {
+      const nextVal = maxSn + 1 + i;
+      snList.push(`SN-${nextVal.toString().padStart(3, "0")}`);
+    }
+    
+    toast.success("Using local serial number generation");
+  }
 
-        // Format Issue Date: YYYY-MM-DD (ISO 8601 to avoid DD/MM vs MM/DD confusion)
-        let formattedIssueDate = "";
-        if (entry.issueDate) {
-          formattedIssueDate = entry.issueDate;
-        }
-
-        // Use empty strings for optional fields if not filled
-        const sheetData = {
-          Timestamp: formattedTimestamp,
-          "Serial No": "", // Leave empty for backend to generate
-          "Document name": entry.documentName,
-          "Document Type": entry.documentType || "", // Empty if not filled
-          Category: entry.category || "", // Empty if not filled
-          Name: entry.name || "", // Empty if not filled
-          "Need Renewal": entry.needsRenewal ? "Yes" : "No",
-          "Renewal Date": formattedRenewalDate,
-          Image: fileUrl || "",
-          issueDate: formattedIssueDate,
-          concernPersonName: entry.concernPersonName || "", // Empty if not filled
-          concernPersonMobile: entry.concernPersonMobile || "", // Empty if not filled
-          concernPersonDepartment: entry.concernPersonDepartment || "", // Empty if not filled
-          CompanyName: entry.companyName || "", // Empty if not filled
-        };
-
-        // 3. Submit Document
-        let serverResponseSN = "";
+  try {
+    const newDocuments: DocumentItem[] = [];
+    const folderId = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
+    
+    // Create an array to store file upload results
+    const uploadResults: Array<{index: number, fileUrl: string | null}> = [];
+    
+    // STEP 2: Upload all files sequentially with delay
+    for (let i = 0; i < entries.length; i++) {
+      const entry = entries[i];
+      
+      if (entry.file && entry.fileContent && folderId) {
         try {
-          const res = await submitToGoogleSheets({
-            action: "insert",
+          // Add delay between uploads (1 second gap)
+          if (i > 0) {
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+          
+          console.log(`📤 Uploading file ${i + 1}: ${entry.fileName}`);
+          
+          const uploadRes = await submitToGoogleSheets({
+            action: "uploadFile",
             sheetName: "Documents",
-            data: [
-              sheetData.Timestamp, // A
-              sheetData["Serial No"], // B - will be empty string, server generates it
-              sheetData["Document name"], // C
-              sheetData["Document Type"], // D
-              sheetData.Category, // E
-              sheetData.Name, // F: Name (user entered)
-              sheetData["Need Renewal"], // G
-              sheetData["Renewal Date"], // H
-              sheetData.Image, // I
-              null, // J: Status
-              null, // K: Planned1
-              null, // L: Actual1
-              sheetData.issueDate, // M
-              sheetData.concernPersonName, // N
-              sheetData.concernPersonMobile, // O
-              sheetData.concernPersonDepartment, // P
-              sheetData.CompanyName, // Q: Company Name (from dropdown)
-            ],
+            data: {
+              base64Data: entry.fileContent,
+              fileName: entry.fileName,
+              mimeType: entry.file.type,
+              folderId: folderId,
+            },
           });
 
-          console.log(`✅ Document ${index + 1} saved to Google Sheets`);
-          if (res && res.serialNo) {
-            serverResponseSN = res.serialNo;
+          if (uploadRes && uploadRes.fileUrl) {
+            console.log(`✅ Upload successful for file ${i + 1}`);
+            uploadResults.push({index: i, fileUrl: uploadRes.fileUrl});
+          } else {
+            console.error(`❌ Upload failed for file ${i + 1}`);
+            uploadResults.push({index: i, fileUrl: null});
+            toast.error(`File ${entry.fileName} upload failed. Saving without file.`);
           }
-        } catch (error) {
-          console.error(`❌ Error saving document ${index + 1}:`, error);
-          throw error;
+        } catch (uploadErr) {
+          console.error(`❌ Upload error for file ${i + 1}:`, uploadErr);
+          uploadResults.push({index: i, fileUrl: null});
+          toast.error(`Failed to upload ${entry.fileName}, saving without file.`);
         }
+      } else {
+        uploadResults.push({index: i, fileUrl: null});
+      }
+    }
 
-        // 4. Update Local State
-        newDocuments.push({
-          id: Math.random().toString(36).substr(2, 9),
-          sn: serverResponseSN || "Pending", // Use SN from server
-          documentName: entry.documentName,
-          companyName: entry.name || "", // Empty if not filled
-          pName: entry.name || "", // Empty if not filled
-          documentType: entry.documentType || "", // Empty if not filled
-          category: entry.category || "", // Empty if not filled
-          needsRenewal: entry.needsRenewal,
-          renewalDate: entry.needsRenewal ? entry.renewalDate : undefined,
-          file: entry.fileName || null,
-          fileContent: entry.fileContent,
-          date: new Date().toISOString().split("T")[0],
-          status: "Active",
-          issueDate: entry.issueDate,
-          concernPersonName: entry.concernPersonName,
-          concernPersonMobile: entry.concernPersonMobile,
-          concernPersonDepartment: entry.concernPersonDepartment,
-          companyBranch: entry.companyName || "", // Empty if not filled
-          sharedExpiryDate: undefined,
-          lastSharedAt: "",
-        });
+    // STEP 3: Process all entries with their respective file URLs
+    for (const [index, entry] of entries.entries()) {
+      // Only add to master data if all three fields are filled
+      if (entry.name && entry.documentType && entry.category) {
+        const exists = masterData?.some(
+          (m) =>
+            m.companyName.toLowerCase() === entry.name.toLowerCase() &&
+            m.documentType.toLowerCase() ===
+              entry.documentType.toLowerCase() &&
+            m.category.toLowerCase() === entry.category.toLowerCase(),
+        );
+
+        if (!exists) {
+          addMasterData({
+            id: Math.random().toString(36).substr(2, 9),
+            companyName: entry.name,
+            documentType: entry.documentType,
+            category: entry.category,
+          });
+        }
       }
 
-      addDocuments(newDocuments);
-      toast.success(`${newDocuments.length} Document(s) added successfully`);
-      onClose();
+      // Use the SN from backend allocation
+      const randomSN = snList[index];
+      
+      // Get file URL from upload results
+      const uploadResult = uploadResults.find(r => r.index === index);
+      const fileUrl = uploadResult?.fileUrl || "";
 
-      setEntries([
-        {
-          id: Math.random().toString(),
-          documentName: "",
-          documentType: "",
-          category: "",
-          name: "", // Reset name
-          companyName: "", // Reset company name
-          needsRenewal: false,
-          renewalDate: "",
-          file: null,
-          fileName: "",
-          issueDate: "",
-          concernPersonName: "",
-          concernPersonMobile: "",
-          concernPersonDepartment: "",
-        },
-      ]);
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to save to Google Sheets.");
-    } finally {
-      setIsSubmitting(false);
+      // Prepare Payload
+      const now = new Date();
+      const formattedTimestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")} ${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+
+      // Format Renewal Date
+      let formattedRenewalDate = "";
+      if (entry.renewalDate) {
+        const hours = String(now.getHours()).padStart(2, "0");
+        const minutes = String(now.getMinutes()).padStart(2, "0");
+        formattedRenewalDate = `${entry.renewalDate} ${hours}:${minutes}`;
+      }
+
+      // Format Issue Date
+      let formattedIssueDate = "";
+      if (entry.issueDate) {
+        formattedIssueDate = entry.issueDate;
+      }
+
+      // Use empty strings for optional fields if not filled
+      const sheetData = {
+        Timestamp: formattedTimestamp,
+        "Serial No": randomSN,
+        "Document name": entry.documentName,
+        "Document Type": entry.documentType || "",
+        Category: entry.category || "",
+        Name: entry.name || "",
+        "Need Renewal": entry.needsRenewal ? "Yes" : "No",
+        "Renewal Date": formattedRenewalDate,
+        Image: fileUrl || "",
+        issueDate: formattedIssueDate,
+        concernPersonName: entry.concernPersonName || "",
+        concernPersonMobile: entry.concernPersonMobile || "",
+        concernPersonDepartment: entry.concernPersonDepartment || "",
+        CompanyName: entry.companyName || "",
+      };
+
+      // Submit Document to Google Sheets
+      try {
+    // STEP: Save each document (SERIAL GENERATED BY BACKEND)
+await submitToGoogleSheets({
+  action: "insertDocument",   // ✅ IMPORTANT
+  data: {
+    documentName: entry.documentName,
+    documentType: entry.documentType || "",
+    category: entry.category || "",
+    name: entry.name || "",
+    needRenewal: entry.needsRenewal ? "Yes" : "No",
+    renewalDate: formattedRenewalDate,
+    image: fileUrl || "",
+    issueDate: formattedIssueDate,
+    concernPersonName: entry.concernPersonName || "",
+    concernPersonMobile: entry.concernPersonMobile || "",
+    concernPersonDepartment: entry.concernPersonDepartment || "",
+    companyName: entry.companyName || "",
+  },
+});
+
+        
+        console.log(`✅ Document ${index + 1} saved to Google Sheets`);
+      } catch (error) {
+        console.error(`❌ Error saving document ${index + 1}:`, error);
+        throw error;
+      }
+
+      // Update Local State
+      newDocuments.push({
+        id: Math.random().toString(36).substr(2, 9),
+        sn: randomSN,
+        documentName: entry.documentName,
+        companyName: entry.name || "",
+        pName: entry.name || "",
+        documentType: entry.documentType || "",
+        category: entry.category || "",
+        needsRenewal: entry.needsRenewal,
+        renewalDate: entry.needsRenewal ? entry.renewalDate : undefined,
+        file: entry.fileName || null,
+        fileContent: entry.fileContent,
+        date: new Date().toISOString().split("T")[0],
+        status: "Active",
+        issueDate: entry.issueDate,
+        concernPersonName: entry.concernPersonName,
+        concernPersonMobile: entry.concernPersonMobile,
+        concernPersonDepartment: entry.concernPersonDepartment,
+        companyBranch: entry.companyName || "",
+        sharedExpiryDate: undefined,
+        lastSharedAt: "",
+      });
     }
-  };
 
+    addDocuments(newDocuments);
+    toast.success(`${newDocuments.length} Document(s) added successfully`);
+    onClose();
+
+    // Reset form
+    setEntries([
+      {
+        id: Math.random().toString(),
+        documentName: "",
+        documentType: "",
+        category: "",
+        name: "",
+        companyName: "",
+        needsRenewal: false,
+        renewalDate: "",
+        file: null,
+        fileName: "",
+        issueDate: "",
+        concernPersonName: "",
+        concernPersonMobile: "",
+        concernPersonDepartment: "",
+      },
+    ]);
+  } catch (error) {
+    console.error(error);
+    toast.error("Failed to save to Google Sheets.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
+
+  // UI CODE REMAINS EXACTLY THE SAME - NO CHANGES
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 bg-black/40 backdrop-blur-sm overflow-y-auto">
       <div className="relative my-4 w-full max-w-4xl bg-white rounded-xl shadow-input">
@@ -727,7 +807,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
               >
                 <Plus size={16} />
                 Add Another Document ({entries.length}/10)
-
+              
               </button>
             </div>
           </form>
@@ -746,10 +826,11 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
             type="submit"
             form="add-doc-form"
             disabled={isSubmitting}
-            className={`flex-[2] flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-white text-sm font-bold transition-all shadow-md shadow-indigo-100 ${isSubmitting
-              ? "bg-indigo-400 cursor-not-allowed"
-              : "bg-indigo-600 hover:bg-indigo-700"
-              }`}
+            className={`flex-[2] flex items-center justify-center gap-2 py-2 px-3 rounded-lg text-white text-sm font-bold transition-all shadow-md shadow-indigo-100 ${
+              isSubmitting
+                ? "bg-indigo-400 cursor-not-allowed"
+                : "bg-indigo-600 hover:bg-indigo-700"
+            }`}
           >
             {isSubmitting ? (
               <>
