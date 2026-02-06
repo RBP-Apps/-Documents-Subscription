@@ -130,6 +130,11 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
   ) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error("File size must be less than 50MB");
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setEntries((prev) =>
@@ -389,7 +394,7 @@ const AddDocument: React.FC<AddDocumentProps> = ({ isOpen, onClose }) => {
           needsRenewal: entry.needsRenewal,
           renewalDate: entry.needsRenewal ? entry.renewalDate : undefined,
           file: entry.fileName || null,
-          fileContent: entry.fileContent,
+          fileContent: fileUrl || undefined, // Store URL only, avoid Base64 storage
           date: new Date().toISOString().split("T")[0],
           status: "Active",
           issueDate: entry.issueDate,

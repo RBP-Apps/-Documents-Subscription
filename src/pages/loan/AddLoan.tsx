@@ -31,6 +31,11 @@ const AddLoan: React.FC<AddLoanProps> = ({ isOpen, onClose }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 50 * 1024 * 1024) {
+        toast.error("File size must be less than 50MB");
+        e.target.value = "";
+        return;
+      }
       const reader = new FileReader();
       reader.onloadend = () => {
         setFormData(prev => ({
@@ -124,6 +129,7 @@ const AddLoan: React.FC<AddLoanProps> = ({ isOpen, onClose }) => {
           sn: serverSN || "Processing...", // Ui placeholder
           Timestamp: timestamp,
           ...formData,
+          fileContent: driveFileUrl || undefined, // Avoid storing Base64 in localStorage
           file: driveFileUrl || formData.file // Prefer Drive URL
         };
         addLoan(newItem);

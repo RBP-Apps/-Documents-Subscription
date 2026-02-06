@@ -90,6 +90,11 @@ const EditDocument: React.FC<EditDocumentProps> = ({ isOpen, onClose, documentId
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 50 * 1024 * 1024) {
+                toast.error("File size must be less than 50MB");
+                e.target.value = "";
+                return;
+            }
             setFileName(file.name);
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -144,7 +149,12 @@ const EditDocument: React.FC<EditDocumentProps> = ({ isOpen, onClose, documentId
 
             // Handle File Upload if it's new (Base64)
             const folderId = import.meta.env.VITE_GOOGLE_DRIVE_FOLDER_ID;
-            let fileUrl = formData.fileContent || "";
+            let fileUrl = "";
+
+            // Keep existing URL if it's not a data URI
+            if (formData.fileContent && !formData.fileContent.startsWith("data:")) {
+                fileUrl = formData.fileContent;
+            }
 
             // If it's a new file (base64 data URI), upload it
             if (formData.fileContent && formData.fileContent.startsWith("data:") && folderId) {
@@ -182,11 +192,8 @@ const EditDocument: React.FC<EditDocumentProps> = ({ isOpen, onClose, documentId
                     toast.error("Failed to upload new file, continuing with update...");
                 }
             } else if (formData.fileContent && (formData.fileContent.includes("drive.google.com") || formData.fileContent.includes("docs.google.com"))) {
-                // Existing Google Drive URL - keep it
-                fileUrl = formData.fileContent;
-            } else if (formData.fileContent && formData.fileContent.startsWith("http")) {
-                // Other HTTP link - keep it
-                fileUrl = formData.fileContent;
+                // Double check redundancy, but this block was here. 
+                // We handled this in the initialization above.
             }
 
             // Prepare row data matching the SHEET columns:

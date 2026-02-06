@@ -156,6 +156,11 @@ const DocumentRenewal = () => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 50 * 1024 * 1024) {
+                toast.error("File size must be less than 50MB");
+                e.target.value = "";
+                return;
+            }
             setNewFileName(file.name);
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -253,7 +258,7 @@ const DocumentRenewal = () => {
             updates.renewalDate = formattedNextRenewalDate;
             if (newFileName) {
                 updates.file = newFileName;
-                updates.fileContent = newFileContent;
+                // updates.fileContent = newFileContent; // Avoid saving base64 to store
             }
         } else {
             updates.needsRenewal = false;

@@ -129,6 +129,11 @@ const SubscriptionPayment = () => {
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
+            if (file.size > 50 * 1024 * 1024) {
+                toast.error("File size must be less than 50MB");
+                e.target.value = "";
+                return;
+            }
             setFileName(file.name);
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -210,7 +215,7 @@ const SubscriptionPayment = () => {
                     paymentMethod: paymentMethod,
                     transactionId: transactionId,
                     paymentFile: fileName,
-                    paymentFileContent: fileContent,
+                    paymentFileContent: driveFileUrl || undefined,
                     paymentDate: now.toISOString().split('T')[0],
                     actual3: formattedCurrentDate, // Set Actual 3 to move to History
                     updatedPrice: updatedPrice,
