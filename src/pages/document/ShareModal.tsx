@@ -36,7 +36,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
     const [isSending, setIsSending] = useState(false);
     const [emailSent, setEmailSent] = useState(false);
     const { addShareHistory, shareHistory, documents } = useDataStore();
-    
+
     // Add refs to track initial values
     const initialLoadRef = useRef(true);
     const prevIsOpenRef = useRef(isOpen);
@@ -52,18 +52,18 @@ const ShareModal: React.FC<ShareModalProps> = ({
             setRecipientName('');
             setEmail('');
             setWhatsapp('');
-            
+
             // Only update subject if it's the initial load or documentName has actually changed
-            const shouldUpdateSubject = initialLoadRef.current || 
+            const shouldUpdateSubject = initialLoadRef.current ||
                 (documentName !== prevDocumentNameRef.current && !subject.trim());
 
             if (shouldUpdateSubject) {
                 if (isBatch && batchDocuments.length > 0) {
                     setSubject(`Sharing ${batchDocuments.length} Documents`);
-                    setMessage(`Please find attached ${batchDocuments.length} documents. This link will expire in 10 days.`);
+                    setMessage(`Please find attached ${batchDocuments.length} documents. This link will expire in 7 days.`);
                 } else {
                     setSubject(`Sharing Document: ${documentName}`);
-                    setMessage(`Please find attached the document: ${documentName}. This link will expire in 10 days.`);
+                    setMessage(`Please find attached the document: ${documentName}. This link will expire in 7 days.`);
                 }
                 prevDocumentNameRef.current = documentName;
             }
@@ -72,7 +72,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
             setIsSending(false);
             initialLoadRef.current = false;
         }
-        
+
         prevIsOpenRef.current = isOpen;
     }, [isOpen]); // Only depend on isOpen
 
@@ -80,7 +80,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
     const handleShareWhatsApp = (): void => {
         const whatsappMessage = generateWhatsAppMessage();
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(whatsappMessage)}`;
-        
+
         // Log the WhatsApp sharing activity with expiry
         if (isBatch && batchDocuments.length > 0) {
             batchDocuments.forEach((doc) => {
@@ -107,7 +107,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 number: whatsapp
             });
         }
-        
+
         window.open(whatsappUrl, '_blank');
     };
 
@@ -189,7 +189,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
             // Add expiry notice to email body
             body += `<div style="background: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px; border-radius: 4px; margin-bottom: 20px;">`;
             body += `<p style="margin: 0; color: #92400e; font-size: 14px;">`;
-            body += `<strong>⚠️ Important:</strong> This shared link will expire in 10 days (${new Date(new Date().getTime() + 10 * 24 * 60 * 60 * 1000).toLocaleDateString()}).`;
+            body += `<strong>⚠️ Important:</strong> This shared link will expire in 7 days (${new Date(new Date().getTime() + 7 * 24 * 60 * 60 * 1000).toLocaleDateString()}).`;
             body += `</p>`;
             body += `</div>`;
 
@@ -247,8 +247,8 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
         // Add expiry notice to WhatsApp message
         const expiryDate = new Date();
-        expiryDate.setDate(expiryDate.getDate() + 10);
-        whatsappMessage += `\n\n⏰ *Link Expiry:* This link will expire on ${expiryDate.toLocaleDateString()} (10 days from now)`;
+        expiryDate.setDate(expiryDate.getDate() + 7);
+        whatsappMessage += `\n\n⏰ *Link Expiry:* This link will expire on ${expiryDate.toLocaleDateString()} (7 days from now)`;
 
         return whatsappMessage;
     };
@@ -263,10 +263,10 @@ const ShareModal: React.FC<ShareModalProps> = ({
         try {
             const emailBody = generateEmailBody();
             let emailSubject = subject;
-            
+
             // Handle attachment URLs for batch
             let attachmentUrl: string | undefined;
-            
+
             if (isBatch && batchDocuments.length > 0) {
                 // For batch, collect all file contents
                 const allFileContents = batchDocuments
@@ -274,11 +274,11 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     .filter(Boolean)
                     .join(',');
                 attachmentUrl = allFileContents || undefined;
-                
+
                 if (!emailSubject) {
                     emailSubject = `Sharing ${batchDocuments.length} Documents`;
                 }
-                
+
                 const result = await sendEmailViaGoogleSheets({
                     to: email,
                     subject: emailSubject,
@@ -305,7 +305,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 if (!emailSubject) {
                     emailSubject = `Sharing Document: ${documentName}`;
                 }
-                
+
                 const result = await sendEmailViaGoogleSheets({
                     to: email,
                     subject: emailSubject,
@@ -339,10 +339,10 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
     const handleSubmit = async (e: React.FormEvent): Promise<void> => {
         e.preventDefault();
-        
+
         let emailSuccess = false;
         let whatsappOpened = false;
-        
+
         // Handle email sending if applicable
         if (type === 'email' || type === 'both') {
             emailSuccess = await handleSendEmail();
@@ -350,17 +350,17 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 return;
             }
         }
-        
+
         // Handle WhatsApp if applicable
         if (type === 'whatsapp' || type === 'both') {
             handleShareWhatsApp();
             whatsappOpened = true;
         }
-        
+
         // Add to share history
         if (emailSuccess || whatsappOpened || type === 'whatsapp') {
             const nextId = shareHistory.length + 1;
-            
+
             if (isBatch && batchDocuments.length > 0) {
                 // Add batch share history
                 batchDocuments.forEach((doc, index) => {
@@ -377,7 +377,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                             contactInfo: email
                         });
                     }
-                    
+
                     if (type === 'whatsapp' || type === 'both') {
                         addShareHistory({
                             id: `share-${Date.now()}-${index}-whatsapp`,
@@ -406,7 +406,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                         recipientName: recipientName || 'N/A',
                         contactInfo: email
                     });
-                    
+
                     addShareHistory({
                         id: `share-${Date.now()}-2`,
                         shareNo: `SH-${String(nextId + 1).padStart(3, '0')}`,
@@ -432,7 +432,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     });
                 }
             }
-            
+
             // Close modal after successful sharing
             if ((type === 'email' && emailSuccess) || type === 'whatsapp' || (type === 'both' && (emailSuccess || whatsappOpened))) {
                 setTimeout(() => {
@@ -614,7 +614,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
                                 </span>
                             </div>
                             <p className="text-xs text-green-600 mt-1">
-                                The shared link will expire in 10 days.
+                                The shared link will expire in 7 days.
                             </p>
                         </div>
                     )}

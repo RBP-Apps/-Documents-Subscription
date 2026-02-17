@@ -234,7 +234,7 @@ const AllDocuments = () => {
     }
   };
 
-  // Updated openShare function with 10 days expiry
+  // Updated openShare function with 7 days expiry
 
   const openShare = (
     type: "email" | "whatsapp" | "both",
@@ -251,13 +251,13 @@ const AllDocuments = () => {
 
     setShareDoc({
       ...doc,
-      // Automatically set 10 days expiry for all shares
+      // Automatically set 7 days expiry for all shares
       document: doc.document ? {
         ...doc.document,
-        sharedExpiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString() // 10 days from now
+        sharedExpiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 days from now
       } : doc.document
     });
- 
+
     setIsShareModalOpen(true);
   };
 
@@ -284,9 +284,9 @@ const AllDocuments = () => {
       // Multiple documents selected - batch mode
       const docsWithExpiry = selectedDocuments.map(doc => ({
         ...doc,
-        sharedExpiryDate: new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString()
+        sharedExpiryDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       }));
-      
+
       openShare(type, {
         id: "batch",
         name: `${selectedIds.size} Documents`,
@@ -558,9 +558,8 @@ const AllDocuments = () => {
                   {filteredData.map((item) => (
                     <tr
                       key={item.id}
-                      className={`hover:bg-gray-50/80 transition-colors ${
-                        selectedIds.has(item.id) ? "bg-indigo-50/30" : ""
-                      }`}
+                      className={`hover:bg-gray-50/80 transition-colors ${selectedIds.has(item.id) ? "bg-indigo-50/30" : ""
+                        }`}
                     >
                       <td className="px-3 py-2 text-center">
                         <input
@@ -671,7 +670,7 @@ const AllDocuments = () => {
                         </span>
                       </td>
                       <td className="px-3 py-2 font-medium text-gray-900 text-center">
-                        { item.pName || "-"}
+                        {item.pName || "-"}
                       </td>
                       <td className="px-3 py-2 text-gray-700 font-mono text-xs text-center">
                         {formatDate(item.issueDate)}
