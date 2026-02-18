@@ -60,10 +60,10 @@ const ShareModal: React.FC<ShareModalProps> = ({
             if (shouldUpdateSubject) {
                 if (isBatch && batchDocuments.length > 0) {
                     setSubject(`Sharing ${batchDocuments.length} Documents`);
-                    setMessage(`Please find attached ${batchDocuments.length} documents. This link will expire in 7 days.`);
+                    setMessage(`Please find the links for ${batchDocuments.length} shared documents. This link will expire in 7 days.`);
                 } else {
                     setSubject(`Sharing Document: ${documentName}`);
-                    setMessage(`Please find attached the document: ${documentName}. This link will expire in 7 days.`);
+                    setMessage(`Please find the link for the shared document: ${documentName}. This link will expire in 7 days.`);
                 }
                 prevDocumentNameRef.current = documentName;
             }
@@ -113,6 +113,26 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
     if (!isOpen || !type) return null;
 
+    const getPreviewUrl = (url: string | undefined): string => {
+        if (!url) return '';
+        if (url.includes("drive.google.com")) {
+            let fileId = null;
+            const viewMatch = url.match(/\/file\/d\/([^/]+)/);
+            if (viewMatch) {
+                fileId = viewMatch[1];
+            } else {
+                const openMatch = url.match(/[?&]id=([^&]+)/);
+                if (openMatch) {
+                    fileId = openMatch[1];
+                }
+            }
+            if (fileId) {
+                return `https://drive.google.com/file/d/${fileId}/preview`;
+            }
+        }
+        return url;
+    };
+
     const generateEmailBody = (): string => {
         let body = '';
 
@@ -140,10 +160,10 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     body += `</table>`;
 
                     if (doc.fileContent) {
-                        body += `<div style="margin-top: 10px; text-align: center;">`;
-                        body += `<a href="${doc.fileContent}" style="display: inline-block; background: #4f46e5; color: white; padding: 8px 16px; text-decoration: none; border-radius: 4px; font-weight: 600; font-size: 14px;">`;
-                        body += `View Document ${index + 1}`;
-                        body += `</a>`;
+                        const previewUrl = getPreviewUrl(doc.fileContent);
+                        body += `<div style="margin-top: 10px;">`;
+                        body += `<strong style="display: block; margin-bottom: 5px; color: #4b5563; font-size: 13px;">Document Link:</strong>`;
+                        body += `<a href="${previewUrl}" style="color: #4f46e5; text-decoration: underline; word-break: break-all; font-size: 13px;">${previewUrl}</a>`;
                         body += `</div>`;
                     }
                     body += `</div>`;
@@ -171,11 +191,11 @@ const ShareModal: React.FC<ShareModalProps> = ({
                 }
 
                 if (fileContent) {
-                    body += `<div style="text-align: center; margin: 25px 0;">`;
-                    body += `<a href="${fileContent}" style="display: inline-block; background: #4f46e5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 600; transition: background 0.3s;">`;
-                    body += `View Document`;
-                    body += `</a>`;
-                    body += `<p style="color: #6b7280; font-size: 14px; margin-top: 10px;">Click the button above to access the document</p>`;
+                    const previewUrl = getPreviewUrl(fileContent);
+                    body += `<div style="margin: 25px 0; padding: 15px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">`;
+                    body += `<strong style="display: block; margin-bottom: 8px; color: #334155;">Document Link:</strong>`;
+                    body += `<a href="${previewUrl}" style="color: #2563eb; text-decoration: underline; word-break: break-all; font-family: monospace; font-size: 14px;">${previewUrl}</a>`;
+                    body += `<p style="color: #64748b; font-size: 12px; margin-top: 10px; font-style: italic;">Click the link above to view the document</p>`;
                     body += `</div>`;
                 }
             }
@@ -219,7 +239,10 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     const date = new Date(doc.renewalDate);
                     whatsappMessage += `📅 Renewal Date: ${date instanceof Date && !isNaN(date.getTime()) ? date.toLocaleDateString() : doc.renewalDate}\n`;
                 }
-                if (doc.fileContent) whatsappMessage += `🔗 Link: ${doc.fileContent}\n`;
+                if (doc.fileContent) {
+                    const previewUrl = getPreviewUrl(doc.fileContent);
+                    whatsappMessage += `🔗 Link: ${previewUrl}\n`;
+                }
                 whatsappMessage += `\n`;
             });
         } else {
@@ -241,7 +264,8 @@ const ShareModal: React.FC<ShareModalProps> = ({
             }
 
             if (fileContent) {
-                whatsappMessage += `\n🔗 *Document Link:* ${fileContent}`;
+                const previewUrl = getPreviewUrl(fileContent);
+                whatsappMessage += `\n🔗 *Document Link:* ${previewUrl}`;
             }
         }
 
@@ -264,16 +288,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
             const emailBody = generateEmailBody();
             let emailSubject = subject;
 
-            // Handle attachment URLs for batch
-            let attachmentUrl: string | undefined;
-
             if (isBatch && batchDocuments.length > 0) {
-                // For batch, collect all file contents
-                const allFileContents = batchDocuments
-                    .map(doc => doc.fileContent)
-                    .filter(Boolean)
-                    .join(',');
-                attachmentUrl = allFileContents || undefined;
 
                 if (!emailSubject) {
                     emailSubject = `Sharing ${batchDocuments.length} Documents`;
@@ -284,7 +299,6 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     subject: emailSubject,
                     body: emailBody,
                     isHtml: true,
-                    attachmentUrl: attachmentUrl,
                     documentName: `${batchDocuments.length} Documents`,
                     recipientName: recipientName,
                     documentType: batchDocuments[0]?.documentType,
@@ -311,7 +325,6 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     subject: emailSubject,
                     body: emailBody,
                     isHtml: true,
-                    attachmentUrl: fileContent,
                     documentName: documentName,
                     recipientName: recipientName,
                     documentType: documentDetails?.documentType,
@@ -505,12 +518,12 @@ const ShareModal: React.FC<ShareModalProps> = ({
                         </div>
                         {!isBatch && fileContent && (
                             <p className="text-xs text-gray-500 mt-1">
-                                File will be attached to the email
+                                Document details and download link will be shared
                             </p>
                         )}
                         {isBatch && batchDocuments.length > 0 && (
                             <p className="text-xs text-gray-500 mt-1">
-                                Document links will be included in the email
+                                Document links will be shared in the email
                             </p>
                         )}
                     </div>
