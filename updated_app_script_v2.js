@@ -208,6 +208,9 @@ function removeDuplicatesAndEmptyRows(data) {
     return [headers, ...uniqueRows];
 }
 
+
+
+
 // Extract file ID from Google Drive URL
 function extractFileIdFromUrl(url) {
     var fileId = null;
@@ -270,16 +273,14 @@ function uploadFileToDrive(base64Data, fileName, mimeType, folderId) {
         const folder = DriveApp.getFolderById(folderId);
         console.log('Folder retrieved:', folder.getName());
 
-        const file = folder.createFile(blob);
-        console.log('File created with ID:', file.getId());
+       const file = folder.createFile(blob);
 
-        file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-        console.log('Sharing permissions set');
+file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
 
-        const fileUrl = "https://drive.google.com/uc?export=view&id=" + file.getId();
-        console.log('File URL generated:', fileUrl);
+// ✅ use view link instead of uc?export=view
+const fileUrl = "https://drive.google.com/open?id=" + file.getId();
 
-        return fileUrl;
+return fileUrl;
 
     } catch (error) {
         console.error("Error in uploadFileToDrive:", error);
@@ -326,50 +327,27 @@ function handleFileUpload(e) {
     }
 }
 
-// Function to send batch email with multiple attachments
 function sendBatchEmail(to, subject, body, isHtml, attachmentUrls, shareData) {
     try {
-        // Construct email options
+
         var emailOptions = {
             to: to,
             subject: subject
         };
 
-        // Add body (HTML or plain text)
+        // Only body send karega, attachment nahi
         if (isHtml) {
             emailOptions.htmlBody = body;
         } else {
             emailOptions.body = body;
         }
 
-        // Add attachments if provided
-        if (attachmentUrls && attachmentUrls.length > 0) {
-            var attachments = [];
+        // ❌ attachment logic completely removed
 
-            for (var i = 0; i < attachmentUrls.length; i++) {
-                var fileId = extractFileIdFromUrl(attachmentUrls[i]);
-
-                if (fileId) {
-                    try {
-                        var file = DriveApp.getFileById(fileId);
-                        attachments.push(file);
-                        console.log('Attaching file:', file.getName());
-                    } catch (e) {
-                        console.log("Could not attach file:", e.toString());
-                    }
-                }
-            }
-
-            if (attachments.length > 0) {
-                emailOptions.attachments = attachments;
-            }
-        }
-
-        // Send the email
-        console.log('Sending batch email to:', to, 'with', (emailOptions.attachments || []).length, 'attachments');
+        // Send email
         MailApp.sendEmail(emailOptions);
 
-        // Log the sharing activity
+        // Log sharing activity
         if (shareData) {
             logSharingActivity(shareData);
         }
@@ -377,7 +355,7 @@ function sendBatchEmail(to, subject, body, isHtml, attachmentUrls, shareData) {
         return true;
 
     } catch (error) {
-        console.error("Error sending batch email:", error);
+        console.error("Error sending email:", error);
         throw error;
     }
 }
@@ -618,18 +596,8 @@ function doPost(e) {
             var body = params.body;
             var isHtml = params.isHtml === 'true';
 
-            // Handle multiple attachments (comma-separated URLs)
-            var attachmentUrls = params.attachmentUrl;
-            var attachmentArray = [];
-
-            if (attachmentUrls) {
-                // Check if it's a comma-separated list of URLs
-                if (attachmentUrls.includes(',')) {
-                    attachmentArray = attachmentUrls.split(',').map(url => url.trim());
-                } else {
-                    attachmentArray = [attachmentUrls];
-                }
-            }
+            // Attachments are disabled as per user request (sharing via links only)
+            // var attachmentArray = [];
 
             // Extract sharing data for logging
             var shareData = {
@@ -655,7 +623,7 @@ function doPost(e) {
             return createJsonResponse({
                 success: true,
                 message: "Email sent successfully",
-                attachmentsCount: attachmentArray.length
+                // attachmentsCount: attachmentArray.length
             });
         }
 

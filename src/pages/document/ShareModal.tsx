@@ -133,6 +133,22 @@ const ShareModal: React.FC<ShareModalProps> = ({
         return url;
     };
 
+
+function getSafeDriveLink(fileUrl: string) {
+
+    if (!fileUrl) return "";
+
+    const match = fileUrl.match(/[-\w]{25,}/);
+
+    if (!match) return fileUrl;
+
+    const fileId = match[0];
+
+    const driveUrl = `https://drive.google.com/file/d/${fileId}/view`;
+
+    // Encode to prevent Gmail preview
+    return `https://www.google.com/url?q=${encodeURIComponent(driveUrl)}`;
+}
     const generateEmailBody = (): string => {
         let body = '';
 
@@ -159,13 +175,13 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     }
                     body += `</table>`;
 
-                    if (doc.fileContent) {
-                        const previewUrl = getPreviewUrl(doc.fileContent);
-                        body += `<div style="margin-top: 10px;">`;
-                        body += `<strong style="display: block; margin-bottom: 5px; color: #4b5563; font-size: 13px;">Document Link:</strong>`;
-                        body += `<a href="${previewUrl}" style="color: #4f46e5; text-decoration: underline; word-break: break-all; font-size: 13px;">${previewUrl}</a>`;
-                        body += `</div>`;
-                    }
+                    // if (doc.fileContent) {
+                    //     const previewUrl = getPreviewUrl(doc.fileContent);
+                    //     body += `<div style="margin-top: 10px;">`;
+                    //     body += `<strong style="display: block; margin-bottom: 5px; color: #4b5563; font-size: 13px;">Document Link:</strong>`;
+                    //     body += `<a href="${previewUrl}" style="color: #4f46e5; text-decoration: underline; word-break: break-all; font-size: 13px;">${previewUrl}</a>`;
+                    //     body += `</div>`;
+                    // }
                     body += `</div>`;
                 });
             } else {
@@ -190,14 +206,20 @@ const ShareModal: React.FC<ShareModalProps> = ({
                     body += `</div>`;
                 }
 
-                if (fileContent) {
-                    const previewUrl = getPreviewUrl(fileContent);
-                    body += `<div style="margin: 25px 0; padding: 15px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px;">`;
-                    body += `<strong style="display: block; margin-bottom: 8px; color: #334155;">Document Link:</strong>`;
-                    body += `<a href="${previewUrl}" style="color: #2563eb; text-decoration: underline; word-break: break-all; font-family: monospace; font-size: 14px;">${previewUrl}</a>`;
-                    body += `<p style="color: #64748b; font-size: 12px; margin-top: 10px; font-style: italic;">Click the link above to view the document</p>`;
-                    body += `</div>`;
-                }
+               if (fileContent) {
+    // Ensure preview link format (Google Drive)
+  const safeUrl = getSafeDriveLink(fileContent);
+
+body += `
+<div style="margin-top:15px;">
+  <strong>Document Link:</strong><br>
+  <a href="${safeUrl}" target="_blank"
+     style="color:#2563eb; text-decoration:underline; word-break:break-all;">
+     ${safeUrl}
+  </a>
+</div>
+`;
+}
             }
 
             if (message) {

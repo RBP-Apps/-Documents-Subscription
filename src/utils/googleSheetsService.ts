@@ -39,7 +39,7 @@ export interface MasterSheetRow {
 }
 
 export const submitToGoogleSheets = async (payload: SheetPayload) => {
-  
+
   if (!GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
@@ -95,7 +95,7 @@ export const submitToGoogleSheets = async (payload: SheetPayload) => {
 
     const res = await fetch(GOOGLE_SCRIPT_URL, {
 
-      
+
       method: "POST",
       mode: "cors",
       headers: {
@@ -133,7 +133,7 @@ export const submitToGoogleSheets = async (payload: SheetPayload) => {
 };
 
 export const fetchMasterFromGoogleSheets = async () => {
-  
+
   if (!GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
@@ -176,7 +176,7 @@ export const fetchMasterFromGoogleSheets = async () => {
 
 export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> => {
   const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-  
+
   if (!GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
@@ -298,7 +298,7 @@ export const fetchDocumentsFromGoogleSheets = async (): Promise<DocumentItem[]> 
 
 export const fetchRenewalHistoryFromGoogleSheets = async (): Promise<RenewalItem[]> => {
   const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-  
+
   if (!GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
@@ -370,7 +370,7 @@ export const fetchRenewalHistoryFromGoogleSheets = async (): Promise<RenewalItem
 
 export const fetchUsersFromGoogleSheets = async (): Promise<User[]> => {
 
-  
+
   if (!GOOGLE_SCRIPT_URL) {
     throw new Error("Google Script URL is not defined");
   }
@@ -406,9 +406,9 @@ export const fetchUsersFromGoogleSheets = async (): Promise<User[]> => {
 };
 
 export const fetchLoansFromGoogleSheets = async (): Promise<LoanItem[]> => {
-  
+
   const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-  
+
   if (!GOOGLE_SCRIPT_URL) {
     throw new Error(
       "Google Script URL is not defined in environment variables"
@@ -498,7 +498,6 @@ export interface EmailData {
   subject: string;
   body: string;
   isHtml?: boolean;
-  attachmentUrl?: string;
   documentName?: string;
   recipientName?: string;
   documentType?: string;
@@ -514,7 +513,6 @@ export const sendEmailViaGoogleSheets = async (emailData: EmailData) => {
     params.append('subject', emailData.subject);
     params.append('body', emailData.body);
     params.append('isHtml', emailData.isHtml ? 'true' : 'false');
-    if (emailData.attachmentUrl) params.append('attachmentUrl', emailData.attachmentUrl);
     if (emailData.recipientName) params.append('recipientName', emailData.recipientName);
     if (emailData.documentName) params.append('documentName', emailData.documentName);
     if (emailData.documentType) params.append('documentType', emailData.documentType);
@@ -522,10 +520,10 @@ export const sendEmailViaGoogleSheets = async (emailData: EmailData) => {
     if (emailData.serialNo) params.append('serialNo', emailData.serialNo);
 
     const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-    
+
     const response = await fetch(GOOGLE_SCRIPT_URL, {
 
-      
+
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -545,10 +543,10 @@ export const getFileInfoFromGoogleDrive = async (fileId: string) => {
     params.append('fileId', fileId);
 
     const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-    
+
     const response = await fetch(GOOGLE_SCRIPT_URL, {
 
-      
+
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -576,10 +574,10 @@ export const logSharingActivity = async (logData: SharingLogData) => {
     if (logData.number) params.append('number', logData.number);
 
     const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-    
+
     const response = await fetch(GOOGLE_SCRIPT_URL, {
 
-      
+
       method: 'POST',
       mode: 'cors',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -644,10 +642,10 @@ export const updateGoogleSheetCells = async (
     if (!GOOGLE_SCRIPT_URL) {
       throw new Error("Google Script URL is not defined");
     }
-    
+
     const res = await fetch(GOOGLE_SCRIPT_URL, {
 
-      
+
       method: "POST",
       mode: "cors",
       headers: {
@@ -697,10 +695,10 @@ export const updateGoogleSheetCellsBySn = async (
     params.append("sn", payload.sn);
     params.append("cellUpdates", payload.cellUpdates);
 
-    
+
     const res = await fetch(GOOGLE_SCRIPT_URL, {
 
-      
+
       method: "POST",
       mode: "cors",
       headers: {
@@ -735,9 +733,9 @@ export interface RawSubscriptionRenewal {
 }
 
 export const fetchSubscriptionRenewalHistoryFromGoogleSheets = async (): Promise<RawSubscriptionRenewal[]> => {
-  
+
   const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
-  
+
   if (!GOOGLE_SCRIPT_URL) {
     throw new Error("Google Script URL is not defined");
   }
