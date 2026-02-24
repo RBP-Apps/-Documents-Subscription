@@ -36,7 +36,7 @@ const SubscriptionApproval = () => {
             // 1. Fetch Base Subscriptions
             const subUrl = new URL(GOOGLE_SCRIPT_URL);
 
-            
+
             subUrl.searchParams.set("sheet", "Subscription");
             subUrl.searchParams.set("_t", Date.now().toString());
 
@@ -62,10 +62,7 @@ const SubscriptionApproval = () => {
                     return row[2] || row[4]; // Must have company or service name
                 })
                 .map((row: any[], index: number) => {
-                    let sn = row[1] || "";
-                    // Standardize SN format
-                    const snMatch = sn.toString().match(/(\d+)/);
-                    if (snMatch) sn = `SN-${String(snMatch[0]).padStart(3, '0')}`;
+                    const sn = (row[1] || "").toString().trim();
 
                     return {
                         id: `sub-${sn}-${index}`,
@@ -79,6 +76,7 @@ const SubscriptionApproval = () => {
                         purpose: row[7] || "N/A",
                         status: "Pending",
                         actual2: (row[14] || "").toString().trim(), // Column O
+                        planned2: (row[13] || "").toString().trim(), // Column N
                         startDate: "",
                         endDate: ""
                     };
@@ -88,7 +86,7 @@ const SubscriptionApproval = () => {
 
             const appUrl = new URL(GOOGLE_SCRIPT_URL);
 
-            
+
             appUrl.searchParams.set("sheet", "Approval");
             appUrl.searchParams.set("_t", Date.now().toString());
 
@@ -150,7 +148,7 @@ const SubscriptionApproval = () => {
 
     const pendingSubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            !s.actual2 && // Show in Pending ONLY if Actual 2 is null
+            s.planned2 && !s.actual2 && // Column N is NOT null AND Column O IS null
             (
                 s.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -161,7 +159,7 @@ const SubscriptionApproval = () => {
 
     const historySubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            (s.approvalNo || s.approvalDate) &&
+            s.planned2 && s.actual2 && // Column N is NOT null AND Column O IS NOT null
             (
                 s.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -189,7 +187,7 @@ const SubscriptionApproval = () => {
 
             const url = new URL(GOOGLE_SCRIPT_URL);
 
-            
+
             url.searchParams.set("sheet", "Approval");
             url.searchParams.set("_t", new Date().getTime().toString());
 
@@ -279,7 +277,7 @@ const SubscriptionApproval = () => {
                         { column: 15, value: formattedCurrentDate }, // Column O: Actual 2
                         { column: 17, value: newStatus }             // Column Q: Approval Status
                     ];
-                    
+
                     console.log("Updating strictly Columns 15 (Actual 2) and 17 (Status)...");
                     await updateGoogleSheetCellsBySn('Subscription', selectedSub.sn, cellUpdates);
                 } catch (updateErr) {
