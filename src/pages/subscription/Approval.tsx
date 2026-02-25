@@ -162,7 +162,7 @@ const SubscriptionApproval = () => {
 
     const pendingSubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            s.planned2 && (!s.actual2 || s.actual2 === "") && s.status === "Pending" &&
+            s.planned2 && (!s.actual2 || s.actual2 === "") &&
             (
                 s.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -173,7 +173,7 @@ const SubscriptionApproval = () => {
 
     const historySubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            (s.actual2 || (s.status !== "Pending" && s.status !== "")) &&
+            (s.actual2 && s.actual2 !== "") &&
             (
                 s.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
