@@ -116,8 +116,9 @@ export const syncSubscriptions = async (): Promise<SubscriptionItem[]> => {
             const planned2 = (row[13] || '').toString().trim(); // Column N (Planned 2)
             const actual2 = (row[14] || '').toString().trim(); // Column O (Actual 2)
             const approvalStatusCol = (row[16] || '').toString().trim(); // Column Q (Approval Status)
-            const actual3 = (row[18] || '').toString().trim(); // Column S (Payment)
-            const transactionId = (row[19] || '').toString().trim(); // Column T (Transaction ID)
+            const planned3 = (row[17] || '').toString().trim(); // Column R (Payment Planned)
+            const actual3 = (row[18] || '').toString().trim(); // Column S (Payment Actual)
+            const transactionId = (row[19] || '').toString().trim(); // Column T (Time Delay 3 / Transaction placeholder)
             const renewalCount = (row[12] || '0').toString().trim(); // Column M (Renewal Count)
             const renewalStatusSheet = (row[11] || '').toString().trim(); // Column L (Renewal Status)
             const planned1 = (row[8] || '').toString().trim(); // Column I (Planned 1)
@@ -178,6 +179,7 @@ export const syncSubscriptions = async (): Promise<SubscriptionItem[]> => {
                 remarks: '',
                 actual2,
                 actual3,
+                planned3,
                 renewalStatus: renewalStatusSheet,
                 planned1,
                 planned2,

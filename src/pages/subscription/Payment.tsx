@@ -81,7 +81,7 @@ const SubscriptionPayment = () => {
     // Optimized Filters with deferredSearch
     const pendingSubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            s.status === 'Approved' &&
+            s.planned3 && (!s.actual3 || s.actual3 === "") &&
             (
                 s.companyName.toLowerCase().includes(deferredSearch.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(deferredSearch.toLowerCase()) ||
@@ -92,7 +92,7 @@ const SubscriptionPayment = () => {
 
     const historySubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            s.status === 'Paid' &&
+            (s.actual3 && s.actual3 !== "") &&
             (
                 s.companyName.toLowerCase().includes(deferredSearch.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(deferredSearch.toLowerCase()) ||

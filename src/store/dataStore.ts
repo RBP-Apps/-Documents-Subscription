@@ -56,6 +56,7 @@ export interface SubscriptionItem {
   paymentFile?: string;
   paymentFileContent?: string;
   actual3?: string;
+  planned3?: string;
   planned2?: string; // Column N (13)
   actual2?: string; // Column O (14)
   planned1?: string;

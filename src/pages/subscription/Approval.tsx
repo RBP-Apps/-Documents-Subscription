@@ -33,6 +33,16 @@ const SubscriptionApproval = () => {
             const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
             if (!GOOGLE_SCRIPT_URL) return;
 
+            // Helper to normalize SN for matching (handles differences in leading zeros)
+            const normalizeSN = (sn: string) => {
+                if (!sn) return "";
+                const s = String(sn).trim().toUpperCase();
+                // Match "SUB-" followed by any number of zeros and then digits
+                const match = s.match(/^SUB-0*(\d+)$/);
+                if (match) return `SUB-${match[1]}`;
+                return s;
+            };
+
             // 1. Fetch Base Subscriptions
             const subUrl = new URL(GOOGLE_SCRIPT_URL);
 
@@ -104,7 +114,9 @@ const SubscriptionApproval = () => {
                     const note = log[5];   // Note
                     const date = log[0];   // Timestamp
 
-                    const subIndex = baseSubs.findIndex(s => s.sn === subNo);
+                    const normalizedSubNo = normalizeSN(subNo);
+                    const subIndex = baseSubs.findIndex(s => normalizeSN(s.sn) === normalizedSubNo);
+
                     if (subIndex !== -1) {
                         baseSubs[subIndex] = {
                             ...baseSubs[subIndex],
@@ -131,7 +143,9 @@ const SubscriptionApproval = () => {
                             remarks: note,
                             approvalDate: date,
                             startDate: "",
-                            endDate: ""
+                            endDate: "",
+                            actual2: "Fetched", // Set this to ensure it passes History filter
+                            planned2: "Fetched" // Set this to ensure it passes History filter
                         });
                     }
                 });
@@ -148,7 +162,7 @@ const SubscriptionApproval = () => {
 
     const pendingSubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            s.planned2 && !s.actual2 && // Column N is NOT null AND Column O IS null
+            s.planned2 && (!s.actual2 || s.actual2 === "") && s.status === "Pending" &&
             (
                 s.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -159,7 +173,7 @@ const SubscriptionApproval = () => {
 
     const historySubscriptions = useMemo(() =>
         subscriptions.filter(s =>
-            s.planned2 && s.actual2 && // Column N is NOT null AND Column O IS NOT null
+            (s.actual2 || (s.status !== "Pending" && s.status !== "")) &&
             (
                 s.companyName.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 s.subscriptionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
