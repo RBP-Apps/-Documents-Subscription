@@ -172,10 +172,28 @@ export interface ShareItem {
   contactInfo: string;
 }
 
+export interface BGItem {
+  id: string;
+  Timestamp: string;
+  sn: string; // BG-xxx
+  bgName: string;
+  bgNo: string;
+  bankName: string;
+  amount: string;
+  startDate: string;
+  endDate: string;
+  extendExpiryDate?: string;
+  remarks: string;
+  file?: string | null;
+  fileContent?: string;
+  rowIndex?: number;
+}
+
 interface DataState {
   documents: DocumentItem[];
   subscriptions: SubscriptionItem[];
   loans: LoanItem[];
+  bgs: BGItem[];
   masterData: MasterItem[];
   renewalHistory: RenewalItem[];
   subscriptionRenewalHistory: SubscriptionRenewalItem[];
@@ -187,6 +205,9 @@ interface DataState {
   addLoan: (item: LoanItem) => void;
   addLoans: (items: LoanItem[]) => void;
   setLoans: (items: LoanItem[]) => void;
+  addBG: (item: BGItem) => void;
+  setBgs: (items: BGItem[]) => void;
+  updateBG: (id: string, updatedItem: Partial<BGItem>) => void;
   addMasterData: (item: MasterItem) => void;
   addRenewalHistory: (item: RenewalItem) => void;
   addSubscriptionRenewalHistory: (item: SubscriptionRenewalItem) => void;
@@ -210,6 +231,7 @@ const useDataStore = create<DataState>()(
       documents: [],
       subscriptions: [],
       loans: [],
+      bgs: [],
       masterData: [],
       renewalHistory: [],
       shareHistory: [],
@@ -223,6 +245,14 @@ const useDataStore = create<DataState>()(
       addLoan: (item) => set((state) => ({ loans: [...state.loans, item] })),
       addLoans: (items) => set((state) => ({ loans: [...state.loans, ...items] })),
       setLoans: (items) => set({ loans: items }),
+      addBG: (item) => set((state) => ({ bgs: [...state.bgs, item] })),
+      setBgs: (items) => set({ bgs: items }),
+      updateBG: (id, updatedItem) =>
+        set((state) => ({
+          bgs: state.bgs.map((bg) =>
+            bg.id === id ? { ...bg, ...updatedItem } : bg
+          ),
+        })),
       addMasterData: (item) =>
         set((state) => ({ masterData: [...state.masterData, item] })),
       addRenewalHistory: (item) =>

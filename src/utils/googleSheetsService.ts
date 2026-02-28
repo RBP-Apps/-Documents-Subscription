@@ -1,4 +1,4 @@
-import { DocumentItem, LoanItem, RenewalItem } from '../store/dataStore';
+import { DocumentItem, LoanItem, RenewalItem, BGItem } from '../store/dataStore';
 import { User } from '../store/authStore';
 
 // Environment variables
@@ -773,5 +773,72 @@ export const fetchSubscriptionRenewalHistoryFromGoogleSheets = async (): Promise
   } catch (error) {
     console.error("Fetch Subscription Renewal History Error:", error);
     return [];
+  }
+};
+
+export const fetchBGsFromGoogleSheets = async (): Promise<BGItem[]> => {
+
+  const GOOGLE_SCRIPT_URL = import.meta.env.VITE_GOOGLE_SCRIPT_URL || "";
+
+  if (!GOOGLE_SCRIPT_URL) {
+    throw new Error(
+      "Google Script URL is not defined in environment variables"
+    );
+  }
+
+  const url = new URL(GOOGLE_SCRIPT_URL);
+
+  url.searchParams.set("sheet", "BG");
+  url.searchParams.set("_t", new Date().getTime().toString());
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: "GET",
+      mode: "cors",
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        `Failed to fetch BGs: ${res.status} ${res.statusText}`
+      );
+    }
+
+    const json = (await res.json()) as any;
+    const rows = json.data;
+    const body = rows.length > 0 ? rows.slice(1) : rows;
+
+    return body
+      .map((r: any, index: number) => {
+        const fileUrl = (r?.[10] || "").toString().trim();
+
+        const lastVal = r[r.length - 1];
+        const serverRowIndex = (typeof lastVal === 'number' && lastVal > 1) ? lastVal : null;
+        const rowIndex = serverRowIndex || (index + 2);
+
+        return {
+          id: `bg-${index}-${Date.now()}`,
+          sn: (r?.[1] || "").toString().trim(),
+          bgName: (r?.[2] || "").toString().trim(),
+          bgNo: (r?.[3] || "").toString().trim(),
+          bankName: (r?.[4] || "").toString().trim(),
+          amount: (r?.[5] || "").toString().trim(),
+          startDate: (r?.[6] || "").toString().trim(),
+          endDate: (r?.[7] || "").toString().trim(),
+          extendExpiryDate: (r?.[8] || "").toString().trim(),
+          remarks: (r?.[9] || "").toString().trim(),
+          file: fileUrl === "No File" ? null : fileUrl,
+          fileContent: fileUrl === "No File" ? undefined : fileUrl,
+          rowIndex: rowIndex,
+          Timestamp: (r?.[0] || "").toString().trim(),
+        };
+      })
+      .filter((r: any) =>
+        r.sn &&
+        r.sn.toString().startsWith("BG-") &&
+        r.bgName.toLowerCase() !== "bg name"
+      );
+  } catch (error) {
+    console.error("Fetch BGs Sheet Error:", error);
+    throw error;
   }
 };

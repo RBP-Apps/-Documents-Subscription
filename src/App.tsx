@@ -29,6 +29,9 @@ import AllLoans from "./pages/loan/AllLoans";
 import LoanForeclosure from "./pages/loan/Foreclosure";
 import LoanNOC from "./pages/loan/NOC";
 
+// BG Pages
+import AllBG from "./pages/bg/AllBG";
+
 import MasterPage from "./pages/master/MasterPage";
 
 // Main Router Configuration
@@ -72,6 +75,12 @@ function App() {
              <Route path="all" element={<AllLoans />} />
              <Route path="foreclosure" element={<LoanForeclosure />} />
              <Route path="noc" element={<LoanNOC />} />
+          </Route>
+
+          {/* BG Routes */}
+          <Route path="bg">
+             <Route index element={<Navigate to="all" replace />} />
+             <Route path="all" element={<AllBG />} />
           </Route>
 
           <Route path="master" element={<MasterPage />} />
