@@ -289,7 +289,7 @@ const AddBG: React.FC<AddBGProps> = ({ isOpen, onClose }) => {
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     <div className="flex items-center gap-2">
                       <Calendar size={14} className="text-indigo-600" />
-                      BG End Date <span className="text-red-500">*</span>
+                      Expiry date <span className="text-red-500">*</span>
                     </div>
                   </label>
                   <input
@@ -307,7 +307,7 @@ const AddBG: React.FC<AddBGProps> = ({ isOpen, onClose }) => {
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   <div className="flex items-center gap-2">
                     <Calendar size={14} className="text-indigo-600" />
-                    BG Extend Expiry Date <span className="text-gray-400 text-xs">(Optional)</span>
+                    Claim expiry date <span className="text-gray-400 text-xs">(Optional)</span>
                   </div>
                 </label>
                 <input
