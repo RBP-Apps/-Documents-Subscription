@@ -130,8 +130,8 @@ const AllBG = () => {
                                             <th className="px-4 py-4 border-b border-gray-100">Bank Name</th>
                                             <th className="px-4 py-4 border-b border-gray-100 text-right">Amount</th>
                                             <th className="px-4 py-4 border-b border-gray-100 whitespace-nowrap">Start Date</th>
-                                            <th className="px-4 py-4 border-b border-gray-100 whitespace-nowrap">End Date</th>
-                                            <th className="px-4 py-4 border-b border-gray-100 whitespace-nowrap">Extend Expiry</th>
+                                            <th className="px-4 py-4 border-b border-gray-100 whitespace-nowrap">Expiry date</th>
+                                            <th className="px-4 py-4 border-b border-gray-100 whitespace-nowrap">Claim expiry date</th>
                                             <th className="px-4 py-4 border-b border-gray-100">File</th>
                                             <th className="px-4 py-4 border-b border-gray-100">Remarks</th>
                                         </tr>
